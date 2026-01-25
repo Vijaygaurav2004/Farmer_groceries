@@ -50,6 +50,21 @@ export const DELIVERY_FEE = 30;
 export const MIN_ORDER_VALUE = 100;
 export const MAX_DISTANCE_KM = 50;
 
+// Fallback origin used for demo/nearby lookups when a user's live
+// location isn't available yet (Mumbai).
+export const DEFAULT_COORDINATES = {
+  latitude: 19.0760,
+  longitude: 72.8777,
+};
+
+export const SORT_OPTIONS = [
+  { id: 'default', label: 'Default' },
+  { id: 'price_asc', label: 'Price: Low to High' },
+  { id: 'price_desc', label: 'Price: High to Low' },
+] as const;
+
+export type SortOptionId = typeof SORT_OPTIONS[number]['id'];
+
 export const REGEX = {
   phone: /^[6-9]\d{9}$/,
   email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,

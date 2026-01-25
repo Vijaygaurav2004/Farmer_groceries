@@ -18,6 +18,7 @@ import { useAuth } from '../../src/contexts/AuthContext';
 import { useCart } from '../../src/contexts/CartContext';
 import { SupabaseService } from '../../src/services/supabase';
 import { Product, ProductCategory, Farmer } from '../../src/types';
+import { SORT_OPTIONS, SortOptionId, DEFAULT_COORDINATES } from '../../src/constants';
 
 const categories: { id: ProductCategory; label: string; icon: string }[] = [
   { id: 'vegetables', label: 'Vegetables', icon: '🥬' },
@@ -38,6 +39,8 @@ export default function CustomerHomeScreen() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<ProductCategory | null>(null);
+  const [sortBy, setSortBy] = useState<SortOptionId>('default');
+  const [organicOnly, setOrganicOnly] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
   const [farmers, setFarmers] = useState<Farmer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -71,8 +74,12 @@ export default function CustomerHomeScreen() {
 
       // Load nearby farmers
       try {
-        const farmersData = await SupabaseService.getNearbyFarmers(19.0760, 72.8777, 100);
-      setFarmers(farmersData.slice(0, 5));
+        const farmersData = await SupabaseService.getNearbyFarmers(
+          DEFAULT_COORDINATES.latitude,
+          DEFAULT_COORDINATES.longitude,
+          100
+        );
+        setFarmers(farmersData.slice(0, 5));
       } catch (error) {
         console.log('Error loading farmers:', error);
         setFarmers([]);
@@ -111,10 +118,17 @@ export default function CustomerHomeScreen() {
     // For iOS, silent feedback with just the button animation is enough
   };
 
-  const filteredProducts = products.filter(product =>
-    product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    product.description.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredProducts = products
+    .filter(product =>
+      product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      product.description.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+    .filter(product => !organicOnly || product.isOrganic)
+    .sort((a, b) => {
+      if (sortBy === 'price_asc') return a.pricePerUnit - b.pricePerUnit;
+      if (sortBy === 'price_desc') return b.pricePerUnit - a.pricePerUnit;
+      return 0;
+    });
 
   return (
     <View className="flex-1 bg-white">
@@ -187,6 +201,45 @@ export default function CustomerHomeScreen() {
                     }`}
                 >
                   {category.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+
+        {/* Sort & Filter */}
+        <View className="px-6 pb-4">
+          <Text className="text-lg font-bold text-gray-900 mb-3">Sort & Filter</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <TouchableOpacity
+              onPress={() => setOrganicOnly(!organicOnly)}
+              className={`mr-3 px-4 py-2 rounded-full flex-row items-center ${
+                organicOnly ? 'bg-primary-600' : 'bg-gray-100'
+              }`}
+            >
+              <Text className="text-base mr-1">🌱</Text>
+              <Text
+                className={`text-sm font-semibold ${
+                  organicOnly ? 'text-white' : 'text-gray-700'
+                }`}
+              >
+                Organic Only
+              </Text>
+            </TouchableOpacity>
+            {SORT_OPTIONS.map(option => (
+              <TouchableOpacity
+                key={option.id}
+                onPress={() => setSortBy(option.id)}
+                className={`mr-3 px-4 py-2 rounded-full ${
+                  sortBy === option.id ? 'bg-primary-600' : 'bg-gray-100'
+                }`}
+              >
+                <Text
+                  className={`text-sm font-semibold ${
+                    sortBy === option.id ? 'text-white' : 'text-gray-700'
+                  }`}
+                >
+                  {option.label}
                 </Text>
               </TouchableOpacity>
             ))}
