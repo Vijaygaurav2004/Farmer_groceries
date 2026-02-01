@@ -12,6 +12,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { MotiView } from 'moti';
 import { SupabaseService } from '../../../src/services/supabase';
 import { Order } from '../../../src/types';
+import { canCancelOrder, getEstimatedDeliveryTime } from '../../../src/utils/helpers';
 
 const orderStatusSteps = [
   { key: 'placed', label: 'Order Placed', icon: '📝' },
@@ -29,6 +30,7 @@ export default function TrackOrderScreen() {
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
 
   useEffect(() => {
     loadOrder();
@@ -51,6 +53,34 @@ export default function TrackOrderScreen() {
     setRefreshing(true);
     await loadOrder();
     setRefreshing(false);
+  };
+
+  const handleCancelOrder = () => {
+    if (!order) return;
+
+    Alert.alert(
+      'Cancel Order',
+      'Are you sure you want to cancel this order? This cannot be undone.',
+      [
+        { text: 'No', style: 'cancel' },
+        {
+          text: 'Yes, Cancel',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setCancelling(true);
+              await SupabaseService.updateOrderStatus(order.id, 'cancelled', 'Cancelled by customer');
+              await loadOrder();
+            } catch (error) {
+              console.error('Error cancelling order:', error);
+              Alert.alert('Error', 'Failed to cancel order. Please try again.');
+            } finally {
+              setCancelling(false);
+            }
+          },
+        },
+      ]
+    );
   };
 
   const getCurrentStepIndex = () => {
@@ -139,6 +169,11 @@ export default function TrackOrderScreen() {
           <Text className="text-sm text-center text-gray-600">
             {formatDate(order.updatedAt)}
           </Text>
+          {!isDelivered && !isCancelled && (
+            <Text className="text-sm text-center text-gray-600 mt-1">
+              Estimated delivery by {formatDate(getEstimatedDeliveryTime(order.createdAt))}
+            </Text>
+          )}
         </MotiView>
 
         {/* Progress Tracker */}
@@ -264,9 +299,26 @@ export default function TrackOrderScreen() {
         </View>
       </ScrollView>
 
-      {/* Contact Support Button */}
+      {/* Contact Support / Cancel Order */}
       {!isDelivered && !isCancelled && (
         <View className="px-6 py-4 border-t border-gray-200">
+          {canCancelOrder(order.orderStatus) && (
+            <TouchableOpacity
+              onPress={handleCancelOrder}
+              disabled={cancelling}
+              className={`bg-red-50 rounded-xl py-4 items-center mb-3 ${
+                cancelling ? 'opacity-50' : ''
+              }`}
+            >
+              {cancelling ? (
+                <ActivityIndicator color="#ef4444" />
+              ) : (
+                <Text className="text-red-600 font-semibold text-base">
+                  Cancel Order
+                </Text>
+              )}
+            </TouchableOpacity>
+          )}
           <TouchableOpacity
             onPress={() => Alert.alert('Support', 'Contact customer support at support@farmergroceries.com')}
             className="bg-gray-100 rounded-xl py-4 items-center"

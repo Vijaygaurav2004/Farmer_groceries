@@ -87,6 +87,17 @@ export const debounce = <T extends (...args: any[]) => any>(
   };
 };
 
+export const ESTIMATED_DELIVERY_MINUTES = 45;
+
+export const getEstimatedDeliveryTime = (orderDate: Date | string): Date => {
+  const dateObj = typeof orderDate === 'string' ? new Date(orderDate) : orderDate;
+  return new Date(dateObj.getTime() + ESTIMATED_DELIVERY_MINUTES * 60 * 1000);
+};
+
+export const canCancelOrder = (orderStatus: string): boolean => {
+  return orderStatus === 'placed' || orderStatus === 'confirmed';
+};
+
 export const getTimeAgo = (date: Date | string): string => {
   const dateObj = typeof date === 'string' ? new Date(date) : date;
   const seconds = Math.floor((new Date().getTime() - dateObj.getTime()) / 1000);
