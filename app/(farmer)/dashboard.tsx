@@ -7,15 +7,18 @@ import {
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import { MotiView } from 'moti';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { SupabaseService } from '../../src/services/supabase';
 import { Order, Product } from '../../src/types';
+import { LOW_STOCK_THRESHOLD } from '../../src/constants';
 
 // No more hardcoded demo data - all from database
 
 export default function FarmerDashboardScreen() {
   const { user } = useAuth();
+  const router = useRouter();
   const [orders, setOrders] = useState<Order[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
@@ -62,6 +65,10 @@ export default function FarmerDashboardScreen() {
       .filter(o => o.orderStatus === 'delivered')
       .reduce((sum, o) => sum + o.total, 0),
   };
+
+  const lowStockProducts = products.filter(
+    p => p.isAvailable && p.stock <= LOW_STOCK_THRESHOLD
+  );
 
   return (
     <View className="flex-1 bg-white">
@@ -141,6 +148,45 @@ export default function FarmerDashboardScreen() {
               </MotiView>
             </View>
           </View>
+
+          {/* Low Stock Alerts */}
+          {lowStockProducts.length > 0 && (
+            <View className="px-6 pb-6">
+              <View className="flex-row justify-between items-center mb-4">
+                <Text className="text-lg font-bold text-gray-900">
+                  ⚠️ Low Stock Alerts
+                </Text>
+                <TouchableOpacity onPress={() => router.push('/(farmer)/products')}>
+                  <Text className="text-primary-600 font-semibold">Manage</Text>
+                </TouchableOpacity>
+              </View>
+
+              {lowStockProducts.map((product, index) => (
+                <MotiView
+                  key={product.id}
+                  from={{ opacity: 0, translateX: -20 }}
+                  animate={{ opacity: 1, translateX: 0 }}
+                  transition={{ type: 'timing', duration: 300, delay: index * 50 }}
+                  className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-3 flex-row justify-between items-center"
+                >
+                  <View className="flex-1">
+                    <Text className="text-base font-semibold text-gray-900">
+                      {product.name}
+                    </Text>
+                    <Text className="text-sm text-gray-600">
+                      Only {product.stock} {product.unit} left
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => router.push('/(farmer)/products')}
+                    className="bg-yellow-500 px-3 py-2 rounded-lg"
+                  >
+                    <Text className="text-white text-xs font-semibold">Restock</Text>
+                  </TouchableOpacity>
+                </MotiView>
+              ))}
+            </View>
+          )}
 
           {/* Recent Orders */}
           <View className="px-6 pb-6">

@@ -15,6 +15,7 @@ import { MotiView } from 'moti';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { SupabaseService } from '../../src/services/supabase';
 import { Product, ProductCategory } from '../../src/types';
+import { LOW_STOCK_THRESHOLD } from '../../src/constants';
 
 const categories: { id: ProductCategory; label: string; icon: string }[] = [
   { id: 'vegetables', label: 'Vegetables', icon: '🥬' },
@@ -205,9 +206,16 @@ export default function FarmerProductsScreen() {
                     <Text className="text-sm text-gray-600 mr-3">
                       ₹{product.pricePerUnit}/{product.unit}
                     </Text>
-                    <Text className="text-sm text-gray-600">
+                    <Text
+                      className={`text-sm ${
+                        product.stock <= LOW_STOCK_THRESHOLD ? 'text-yellow-600 font-semibold' : 'text-gray-600'
+                      }`}
+                    >
                       Stock: {product.stock}
                     </Text>
+                    {product.stock <= LOW_STOCK_THRESHOLD && (
+                      <Text className="text-xs ml-1">⚠️</Text>
+                    )}
                   </View>
 
                   <View className="flex-row items-center justify-between">

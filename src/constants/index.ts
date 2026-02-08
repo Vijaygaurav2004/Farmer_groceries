@@ -49,6 +49,7 @@ export const PAYMENT_METHODS = [
 export const DELIVERY_FEE = 30;
 export const MIN_ORDER_VALUE = 100;
 export const MAX_DISTANCE_KM = 50;
+export const LOW_STOCK_THRESHOLD = 10;
 
 // Fallback origin used for demo/nearby lookups when a user's live
 // location isn't available yet (Mumbai).
