@@ -4,14 +4,13 @@ import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { SupabaseService } from '../../src/services/supabase';
 import { Order } from '../../src/types';
+import { DELIVERY_FEE, DEFAULT_COORDINATES } from '../../src/constants';
+import { calculateDistance } from '../../src/utils/helpers';
 
 export default function DeliveryMapScreen() {
   const { user } = useAuth();
   const [activeOrder, setActiveOrder] = useState<Order | null>(null);
-  const [currentLocation] = useState({
-    latitude: 19.0760,
-    longitude: 72.8777,
-  });
+  const [currentLocation] = useState(DEFAULT_COORDINATES);
 
   useEffect(() => {
     loadActiveOrder();
@@ -83,9 +82,20 @@ export default function DeliveryMapScreen() {
   };
 
   const destinationLocation = activeOrder ? {
-    latitude: activeOrder.deliveryAddress.latitude || 19.0760,
-    longitude: activeOrder.deliveryAddress.longitude || 72.8777,
+    latitude: activeOrder.deliveryAddress.latitude || DEFAULT_COORDINATES.latitude,
+    longitude: activeOrder.deliveryAddress.longitude || DEFAULT_COORDINATES.longitude,
   } : currentLocation;
+
+  const distanceKm = activeOrder
+    ? calculateDistance(
+        currentLocation.latitude,
+        currentLocation.longitude,
+        destinationLocation.latitude,
+        destinationLocation.longitude
+      )
+    : null;
+
+  const etaMinutes = distanceKm !== null ? Math.max(5, Math.round((distanceKm / 25) * 60)) : null;
 
   return (
     <View className="flex-1">
@@ -178,19 +188,19 @@ export default function DeliveryMapScreen() {
           <View>
             <Text className="text-xs text-gray-500">Distance</Text>
             <Text className="text-base font-bold text-gray-900">
-              {activeOrder ? '2.5 km' : '—'}
+              {distanceKm !== null ? `${distanceKm.toFixed(1)} km` : '—'}
             </Text>
           </View>
           <View>
             <Text className="text-xs text-gray-500">ETA</Text>
             <Text className="text-base font-bold text-gray-900">
-              {activeOrder ? '15 mins' : '—'}
+              {etaMinutes !== null ? `${etaMinutes} mins` : '—'}
             </Text>
           </View>
           <View>
             <Text className="text-xs text-gray-500">Delivery Fee</Text>
             <Text className="text-base font-bold text-primary-600">
-              {activeOrder ? '₹30' : '—'}
+              {activeOrder ? `₹${DELIVERY_FEE}` : '—'}
             </Text>
           </View>
         </View>

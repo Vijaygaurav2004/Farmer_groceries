@@ -13,6 +13,8 @@ import { MotiView } from 'moti';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { SupabaseService } from '../../src/services/supabase';
 import { Order } from '../../src/types';
+import { DELIVERY_FEE, DEFAULT_COORDINATES } from '../../src/constants';
+import { calculateDistance } from '../../src/utils/helpers';
 
 // No more hardcoded demo data - all orders from database
 
@@ -22,6 +24,7 @@ export default function DeliveryOrdersScreen() {
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [isAvailable, setIsAvailable] = useState(true);
+  const [declinedOrderIds, setDeclinedOrderIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     loadOrders();
@@ -75,6 +78,23 @@ export default function DeliveryOrdersScreen() {
     );
   };
 
+  const handleDeclineOrder = (orderId: string) => {
+    setDeclinedOrderIds(prev => new Set(prev).add(orderId));
+  };
+
+  const getDistanceLabel = (order: Order): string | null => {
+    const { latitude, longitude } = order.deliveryAddress;
+    if (!latitude || !longitude) return null;
+
+    const distanceKm = calculateDistance(
+      DEFAULT_COORDINATES.latitude,
+      DEFAULT_COORDINATES.longitude,
+      latitude,
+      longitude
+    );
+    return `${distanceKm.toFixed(1)} km away`;
+  };
+
   const handleUpdateStatus = async (orderId: string, currentStatus: string) => {
     const statusMap: Record<string, { next: string; label: string }> = {
       assigned: { next: 'picked_up', label: 'Mark as Picked Up' },
@@ -117,7 +137,9 @@ export default function DeliveryOrdersScreen() {
   };
 
   const myOrders = orders.filter(o => o.deliveryPartnerId === user?.id);
-  const availableOrders = orders.filter(o => !o.deliveryPartnerId && o.orderStatus === 'packed');
+  const availableOrders = orders.filter(
+    o => !o.deliveryPartnerId && o.orderStatus === 'packed' && !declinedOrderIds.has(o.id)
+  );
 
   return (
     <View className="flex-1 bg-white">
@@ -188,6 +210,11 @@ export default function DeliveryOrdersScreen() {
                       <Text className="text-sm text-gray-600">
                         📍 {order.deliveryAddress.street}, {order.deliveryAddress.city}
                       </Text>
+                      {getDistanceLabel(order) && (
+                        <Text className="text-xs text-gray-500 mt-1">
+                          {getDistanceLabel(order)}
+                        </Text>
+                      )}
                     </View>
                     <View className="bg-blue-600 px-3 py-1 rounded-full">
                       <Text className="text-white text-xs font-semibold">NEW</Text>
@@ -196,14 +223,22 @@ export default function DeliveryOrdersScreen() {
 
                   <View className="flex-row justify-between items-center">
                     <Text className="text-lg font-bold text-primary-600">
-                      Earn ₹30
+                      Earn ₹{DELIVERY_FEE}
                     </Text>
-                    <TouchableOpacity
-                      onPress={() => handleAcceptOrder(order.id)}
-                      className="bg-primary-600 px-6 py-2 rounded-lg"
-                    >
-                      <Text className="text-white font-semibold">Accept</Text>
-                    </TouchableOpacity>
+                    <View className="flex-row">
+                      <TouchableOpacity
+                        onPress={() => handleDeclineOrder(order.id)}
+                        className="bg-gray-100 px-4 py-2 rounded-lg mr-2"
+                      >
+                        <Text className="text-gray-700 font-semibold">Decline</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={() => handleAcceptOrder(order.id)}
+                        className="bg-primary-600 px-6 py-2 rounded-lg"
+                      >
+                        <Text className="text-white font-semibold">Accept</Text>
+                      </TouchableOpacity>
+                    </View>
                   </View>
                 </MotiView>
               ))}
@@ -254,7 +289,7 @@ export default function DeliveryOrdersScreen() {
 
                   <View className="flex-row justify-between items-center pt-3 border-t border-gray-200">
                     <Text className="text-base font-bold text-primary-600">
-                      ₹30 delivery fee
+                      ₹{DELIVERY_FEE} delivery fee
                     </Text>
                     
                     {['assigned', 'picked_up', 'out_for_delivery'].includes(order.orderStatus) && (
