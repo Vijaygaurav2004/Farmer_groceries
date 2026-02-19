@@ -10,6 +10,7 @@ import {
 import { useRouter } from 'expo-router';
 import { MotiView } from 'moti';
 import { useCart } from '../../src/contexts/CartContext';
+import { MIN_ORDER_VALUE } from '../../src/constants';
 
 export default function CartScreen() {
   const { cart, removeFromCart, updateQuantity, cartTotal, cartCount } = useCart();
@@ -21,6 +22,14 @@ export default function CartScreen() {
   const handleCheckout = () => {
     if (cart.length === 0) {
       Alert.alert('Empty Cart', 'Please add items to cart');
+      return;
+    }
+
+    if (cartTotal < MIN_ORDER_VALUE) {
+      Alert.alert(
+        'Minimum Order',
+        `Add items worth at least ₹${MIN_ORDER_VALUE} to checkout. You need ₹${MIN_ORDER_VALUE - cartTotal} more.`
+      );
       return;
     }
 
