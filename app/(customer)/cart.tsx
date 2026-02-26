@@ -10,13 +10,14 @@ import {
 import { useRouter } from 'expo-router';
 import { MotiView } from 'moti';
 import { useCart } from '../../src/contexts/CartContext';
-import { MIN_ORDER_VALUE } from '../../src/constants';
+import { DELIVERY_FEE, MIN_ORDER_VALUE } from '../../src/constants';
+import { formatCurrency } from '../../src/utils/helpers';
 
 export default function CartScreen() {
   const { cart, removeFromCart, updateQuantity, cartTotal, cartCount } = useCart();
   const router = useRouter();
 
-  const deliveryFee = 30;
+  const deliveryFee = DELIVERY_FEE;
   const total = cartTotal + deliveryFee;
 
   const handleCheckout = () => {
@@ -102,7 +103,7 @@ export default function CartScreen() {
                 </Text>
                 <View className="flex-row items-center justify-between">
                   <Text className="text-base font-bold text-primary-600">
-                    ₹{item.product.pricePerUnit * item.quantity}
+                    {formatCurrency(item.product.pricePerUnit * item.quantity)}
                   </Text>
                   
                   {/* Quantity Controls */}
@@ -143,19 +144,19 @@ export default function CartScreen() {
           
           <View className="flex-row justify-between mb-2">
             <Text className="text-gray-600">Subtotal</Text>
-            <Text className="text-gray-900 font-semibold">₹{cartTotal}</Text>
+            <Text className="text-gray-900 font-semibold">{formatCurrency(cartTotal)}</Text>
           </View>
           
           <View className="flex-row justify-between mb-2">
             <Text className="text-gray-600">Delivery Fee</Text>
-            <Text className="text-gray-900 font-semibold">₹{deliveryFee}</Text>
+            <Text className="text-gray-900 font-semibold">{formatCurrency(deliveryFee)}</Text>
           </View>
           
           <View className="border-t border-gray-300 my-2" />
           
           <View className="flex-row justify-between">
             <Text className="text-lg font-bold text-gray-900">Total</Text>
-            <Text className="text-lg font-bold text-primary-600">₹{total}</Text>
+            <Text className="text-lg font-bold text-primary-600">{formatCurrency(total)}</Text>
           </View>
         </View>
 
@@ -169,7 +170,7 @@ export default function CartScreen() {
           className="bg-primary-600 rounded-xl py-4 items-center"
         >
           <Text className="text-white text-base font-semibold">
-            Proceed to Payment - ₹{total}
+            Proceed to Payment - {formatCurrency(total)}
           </Text>
         </TouchableOpacity>
       </View>
