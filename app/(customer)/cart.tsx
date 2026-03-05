@@ -14,7 +14,7 @@ import { DELIVERY_FEE, MIN_ORDER_VALUE } from '../../src/constants';
 import { formatCurrency } from '../../src/utils/helpers';
 
 export default function CartScreen() {
-  const { cart, removeFromCart, updateQuantity, cartTotal, cartCount } = useCart();
+  const { cart, removeFromCart, updateQuantity, clearCart, cartTotal, cartCount } = useCart();
   const router = useRouter();
 
   const deliveryFee = DELIVERY_FEE;
@@ -36,6 +36,21 @@ export default function CartScreen() {
 
     // Navigate to payment page
     router.push('/(customer)/payment');
+  };
+
+  const handleClearCart = () => {
+    Alert.alert(
+      'Clear Cart',
+      'Remove all items from your cart?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Clear',
+          style: 'destructive',
+          onPress: () => clearCart(),
+        },
+      ]
+    );
   };
 
   if (cart.length === 0) {
@@ -64,10 +79,13 @@ export default function CartScreen() {
   return (
     <View className="flex-1 bg-white">
       {/* Header */}
-      <View className="px-6 pt-14 pb-4 border-b border-gray-200">
+      <View className="px-6 pt-14 pb-4 border-b border-gray-200 flex-row items-center justify-between">
         <Text className="text-2xl font-bold text-gray-900">
           Cart ({cartCount} items)
         </Text>
+        <TouchableOpacity onPress={handleClearCart}>
+          <Text className="text-sm font-semibold text-red-500">Clear all</Text>
+        </TouchableOpacity>
       </View>
 
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
