@@ -19,6 +19,7 @@ import { useCart } from '../../src/contexts/CartContext';
 import { SupabaseService } from '../../src/services/supabase';
 import { Product, ProductCategory, Farmer } from '../../src/types';
 import { SORT_OPTIONS, SortOptionId, DEFAULT_COORDINATES } from '../../src/constants';
+import { getGreeting } from '../../src/utils/helpers';
 
 const categories: { id: ProductCategory; label: string; icon: string }[] = [
   { id: 'vegetables', label: 'Vegetables', icon: '🥬' },
@@ -136,7 +137,7 @@ export default function CustomerHomeScreen() {
       <View className="px-6 pt-14 pb-4 bg-primary-600">
         <View className="flex-row justify-between items-center mb-4">
           <View>
-            <Text className="text-white text-base">Good Morning 👋</Text>
+            <Text className="text-white text-base">{getGreeting()} 👋</Text>
             <Text className="text-white text-2xl font-bold">
               {user?.name || 'Guest'}
             </Text>
