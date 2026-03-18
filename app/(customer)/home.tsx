@@ -100,6 +100,16 @@ export default function CustomerHomeScreen() {
   };
 
   const handleAddToCart = (product: Product) => {
+    if (!product.isAvailable || product.stock <= 0) {
+      const message = 'This product is currently out of stock';
+      if (Platform.OS === 'android') {
+        ToastAndroid.show(message, ToastAndroid.SHORT);
+      } else {
+        Alert.alert('Out of Stock', message);
+      }
+      return;
+    }
+
     addToCart(product, 1);
     
     // Add visual feedback - mark as added temporarily
