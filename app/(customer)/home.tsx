@@ -309,10 +309,26 @@ export default function CustomerHomeScreen() {
             </View>
           ) : filteredProducts.length === 0 ? (
             <View className="py-12 items-center">
-              <Text className="text-5xl mb-2">📦</Text>
+              <Text className="text-5xl mb-2">{searchQuery || organicOnly ? '🔍' : '📦'}</Text>
               <Text className="text-gray-600 text-center">
-                No products available
+                {searchQuery
+                  ? `No results for "${searchQuery}"`
+                  : organicOnly
+                    ? 'No organic products match your filters'
+                    : 'No products available'}
               </Text>
+              {(searchQuery || organicOnly) && (
+                <TouchableOpacity
+                  onPress={() => {
+                    setSearchQuery('');
+                    setOrganicOnly(false);
+                    setSortBy('default');
+                  }}
+                  className="mt-4 bg-primary-600 rounded-xl px-5 py-2"
+                >
+                  <Text className="text-white font-semibold">Clear filters</Text>
+                </TouchableOpacity>
+              )}
             </View>
           ) : (
             <View className="flex-row flex-wrap justify-between">
