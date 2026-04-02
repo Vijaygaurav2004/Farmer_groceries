@@ -12,6 +12,7 @@ import { useRouter } from 'expo-router';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { SupabaseService } from '../../src/services/supabase';
 import { Order } from '../../src/types';
+import { formatCurrency, formatDate, getTimeAgo } from '../../src/utils/helpers';
 
 const orderStatusConfig = {
   placed: { label: 'Order Placed', color: 'bg-blue-500', icon: '📝' },
@@ -24,12 +25,31 @@ const orderStatusConfig = {
   cancelled: { label: 'Cancelled', color: 'bg-red-500', icon: '✗' },
 };
 
+type OrderFilter = 'all' | 'active' | 'delivered' | 'cancelled';
+
+const ORDER_FILTERS: { id: OrderFilter; label: string }[] = [
+  { id: 'all', label: 'All' },
+  { id: 'active', label: 'Active' },
+  { id: 'delivered', label: 'Delivered' },
+  { id: 'cancelled', label: 'Cancelled' },
+];
+
+const ACTIVE_STATUSES = [
+  'placed',
+  'confirmed',
+  'packed',
+  'assigned',
+  'picked_up',
+  'out_for_delivery',
+];
+
 export default function OrdersScreen() {
   const { user } = useAuth();
   const router = useRouter();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<OrderFilter>('all');
 
   useEffect(() => {
     loadOrders();
@@ -63,24 +83,55 @@ export default function OrdersScreen() {
     });
   };
 
+  const filteredOrders = orders.filter(order => {
+    if (statusFilter === 'all') return true;
+    if (statusFilter === 'active') return ACTIVE_STATUSES.includes(order.orderStatus);
+    if (statusFilter === 'delivered') return order.orderStatus === 'delivered';
+    if (statusFilter === 'cancelled') return order.orderStatus === 'cancelled';
+    return true;
+  });
+
   return (
     <View className="flex-1 bg-white">
       {/* Header */}
       <View className="px-6 pt-14 pb-4 border-b border-gray-200">
-        <Text className="text-2xl font-bold text-gray-900">My Orders</Text>
+        <Text className="text-2xl font-bold text-gray-900 mb-3">My Orders</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          {ORDER_FILTERS.map(filter => (
+            <TouchableOpacity
+              key={filter.id}
+              onPress={() => setStatusFilter(filter.id)}
+              className={`mr-2 px-4 py-2 rounded-full ${
+                statusFilter === filter.id ? 'bg-primary-600' : 'bg-gray-100'
+              }`}
+            >
+              <Text
+                className={`text-sm font-semibold ${
+                  statusFilter === filter.id ? 'text-white' : 'text-gray-700'
+                }`}
+              >
+                {filter.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
       </View>
 
       {loading ? (
         <View className="flex-1 items-center justify-center">
           <ActivityIndicator size="large" color="#22c55e" />
         </View>
-      ) : orders.length === 0 ? (
+      ) : filteredOrders.length === 0 ? (
         <View className="flex-1 items-center justify-center">
           <Text className="text-6xl mb-4">📦</Text>
           <Text className="text-xl font-semibold text-gray-900 mb-2">
-            No orders yet
+            {orders.length === 0 ? 'No orders yet' : 'No matching orders'}
           </Text>
-          <Text className="text-gray-600">Start shopping for fresh produce</Text>
+          <Text className="text-gray-600">
+            {orders.length === 0
+              ? 'Start shopping for fresh produce'
+              : 'Try a different filter'}
+          </Text>
         </View>
       ) : (
         <ScrollView
@@ -91,7 +142,7 @@ export default function OrdersScreen() {
           }
         >
           <View className="px-6 py-4">
-            {orders.map((order, index) => {
+            {filteredOrders.map((order, index) => {
               const statusConfig = orderStatusConfig[order.orderStatus];
               
               return (
