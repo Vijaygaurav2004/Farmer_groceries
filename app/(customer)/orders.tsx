@@ -75,14 +75,6 @@ export default function OrdersScreen() {
     setRefreshing(false);
   };
 
-  const formatDate = (date: Date) => {
-    return new Date(date).toLocaleDateString('en-IN', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-    });
-  };
-
   const filteredOrders = orders.filter(order => {
     if (statusFilter === 'all') return true;
     if (statusFilter === 'active') return ACTIVE_STATUSES.includes(order.orderStatus);
@@ -160,7 +152,7 @@ export default function OrdersScreen() {
                         {order.orderNumber}
                       </Text>
                       <Text className="text-sm text-gray-600">
-                        {formatDate(order.createdAt)}
+                        {formatDate(order.createdAt)} · {getTimeAgo(order.createdAt)}
                       </Text>
                     </View>
                     <View
@@ -192,7 +184,7 @@ export default function OrdersScreen() {
                     <View>
                       <Text className="text-sm text-gray-600">Total Amount</Text>
                       <Text className="text-lg font-bold text-primary-600">
-                        ₹{order.total}
+                        {formatCurrency(order.total)}
                       </Text>
                     </View>
                     <TouchableOpacity 
