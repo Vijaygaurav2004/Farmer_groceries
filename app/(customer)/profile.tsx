@@ -11,6 +11,7 @@ import {
 import { useRouter } from 'expo-router';
 import { MotiView } from 'moti';
 import { useAuth } from '../../src/contexts/AuthContext';
+import { APP_CONFIG } from '../../src/constants';
 
 export default function ProfileScreen() {
   const { user, signOut } = useAuth();
@@ -71,7 +72,11 @@ export default function ProfileScreen() {
     { 
       icon: '❓', 
       label: 'Help & Support', 
-      action: () => Alert.alert('Help & Support', 'Contact us at support@farmergroceries.com'),
+      action: () =>
+        Alert.alert(
+          'Help & Support',
+          `Email: ${APP_CONFIG.supportEmail}\nPhone: ${APP_CONFIG.supportPhone}`
+        ),
       description: 'Get help with your orders'
     },
     { 
@@ -161,7 +166,7 @@ export default function ProfileScreen() {
 
           {/* Version */}
           <Text className="text-center text-gray-400 text-sm mt-6 mb-4">
-            Farmer Groceries v1.0.0
+            {APP_CONFIG.name} v{APP_CONFIG.version}
           </Text>
         </View>
       </ScrollView>
