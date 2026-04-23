@@ -11,7 +11,8 @@ import {
 import { useRouter } from 'expo-router';
 import { MotiView } from 'moti';
 import { useAuth } from '../../src/contexts/AuthContext';
-import { APP_CONFIG } from '../../src/constants';
+import { APP_CONFIG, SUCCESS_MESSAGES } from '../../src/constants';
+import { validatePhone } from '../../src/utils/helpers';
 
 export default function ProfileScreen() {
   const { user, signOut } = useAuth();
@@ -40,7 +41,17 @@ export default function ProfileScreen() {
   };
 
   const handleSaveProfile = () => {
-    Alert.alert('Success', 'Profile updated successfully!');
+    if (!name.trim()) {
+      Alert.alert('Missing Name', 'Please enter your full name');
+      return;
+    }
+
+    if (phone && !validatePhone(phone.replace(/\D/g, '').slice(-10))) {
+      Alert.alert('Invalid Phone', 'Please enter a valid 10-digit Indian mobile number');
+      return;
+    }
+
+    Alert.alert('Success', SUCCESS_MESSAGES.profileUpdated);
     setEditModalVisible(false);
   };
 
