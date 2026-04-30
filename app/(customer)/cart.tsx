@@ -10,15 +10,17 @@ import {
 import { useRouter } from 'expo-router';
 import { MotiView } from 'moti';
 import { useCart } from '../../src/contexts/CartContext';
-import { DELIVERY_FEE, MIN_ORDER_VALUE } from '../../src/constants';
+import { DELIVERY_FEE, FREE_DELIVERY_THRESHOLD, MIN_ORDER_VALUE } from '../../src/constants';
 import { formatCurrency } from '../../src/utils/helpers';
 
 export default function CartScreen() {
   const { cart, removeFromCart, updateQuantity, clearCart, cartTotal, cartCount } = useCart();
   const router = useRouter();
 
-  const deliveryFee = DELIVERY_FEE;
+  const qualifiesForFreeDelivery = cartTotal >= FREE_DELIVERY_THRESHOLD;
+  const deliveryFee = qualifiesForFreeDelivery ? 0 : DELIVERY_FEE;
   const total = cartTotal + deliveryFee;
+  const amountToFreeDelivery = Math.max(0, FREE_DELIVERY_THRESHOLD - cartTotal);
 
   const handleCheckout = () => {
     if (cart.length === 0) {
@@ -167,8 +169,16 @@ export default function CartScreen() {
           
           <View className="flex-row justify-between mb-2">
             <Text className="text-gray-600">Delivery Fee</Text>
-            <Text className="text-gray-900 font-semibold">{formatCurrency(deliveryFee)}</Text>
+            <Text className={`font-semibold ${qualifiesForFreeDelivery ? 'text-green-600' : 'text-gray-900'}`}>
+              {qualifiesForFreeDelivery ? 'FREE' : formatCurrency(deliveryFee)}
+            </Text>
           </View>
+
+          {!qualifiesForFreeDelivery && (
+            <Text className="text-xs text-primary-600 mb-2">
+              Add {formatCurrency(amountToFreeDelivery)} more for free delivery
+            </Text>
+          )}
           
           <View className="border-t border-gray-300 my-2" />
           
