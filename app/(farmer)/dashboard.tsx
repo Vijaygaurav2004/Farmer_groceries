@@ -13,6 +13,7 @@ import { useAuth } from '../../src/contexts/AuthContext';
 import { SupabaseService } from '../../src/services/supabase';
 import { Order, Product } from '../../src/types';
 import { LOW_STOCK_THRESHOLD } from '../../src/constants';
+import { getGreeting } from '../../src/utils/helpers';
 
 // No more hardcoded demo data - all from database
 
@@ -74,7 +75,7 @@ export default function FarmerDashboardScreen() {
     <View className="flex-1 bg-white">
       {/* Header */}
       <View className="px-6 pt-14 pb-6 bg-primary-600">
-        <Text className="text-white text-base mb-1">Welcome Back 👋</Text>
+        <Text className="text-white text-base mb-1">{getGreeting()} 👋</Text>
         <Text className="text-white text-2xl font-bold">
           {user?.name || 'Farmer'}
         </Text>
