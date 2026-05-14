@@ -36,6 +36,7 @@ export default function FarmerProductsScreen() {
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   
   // Add Product Form
   const [formData, setFormData] = useState({
@@ -128,19 +129,41 @@ export default function FarmerProductsScreen() {
     }
   };
 
+  const filteredProducts = products.filter(product => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return true;
+    return (
+      product.name.toLowerCase().includes(query) ||
+      product.category.toLowerCase().includes(query)
+    );
+  });
+
   return (
     <View className="flex-1 bg-white">
       {/* Header */}
-      <View className="px-6 pt-14 pb-4 border-b border-gray-200 flex-row justify-between items-center">
-        <Text className="text-2xl font-bold text-gray-900">
-          My Products ({products.length})
-        </Text>
-        <TouchableOpacity
-          onPress={() => setShowAddModal(true)}
-          className="bg-primary-600 rounded-lg px-4 py-2"
-        >
-          <Text className="text-white font-semibold">+ Add</Text>
-        </TouchableOpacity>
+      <View className="px-6 pt-14 pb-4 border-b border-gray-200">
+        <View className="flex-row justify-between items-center mb-3">
+          <Text className="text-2xl font-bold text-gray-900">
+            My Products ({products.length})
+          </Text>
+          <TouchableOpacity
+            onPress={() => setShowAddModal(true)}
+            className="bg-primary-600 rounded-lg px-4 py-2"
+          >
+            <Text className="text-white font-semibold">+ Add</Text>
+          </TouchableOpacity>
+        </View>
+        {products.length > 0 && (
+          <View className="bg-gray-100 rounded-xl px-4 py-3 flex-row items-center">
+            <Text className="text-lg mr-2">🔍</Text>
+            <TextInput
+              className="flex-1 text-base"
+              placeholder="Search by name or category..."
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+          </View>
+        )}
       </View>
 
       {loading ? (
@@ -161,6 +184,14 @@ export default function FarmerProductsScreen() {
             <Text className="text-white font-semibold">Add Product</Text>
           </TouchableOpacity>
         </View>
+      ) : filteredProducts.length === 0 ? (
+        <View className="flex-1 items-center justify-center px-6">
+          <Text className="text-5xl mb-3">🔍</Text>
+          <Text className="text-lg font-semibold text-gray-900 mb-1">No matches</Text>
+          <Text className="text-gray-600 text-center">
+            No products match "{searchQuery}"
+          </Text>
+        </View>
       ) : (
         <ScrollView
           className="flex-1"
@@ -170,7 +201,7 @@ export default function FarmerProductsScreen() {
           }
         >
           <View className="px-6 py-4">
-            {products.map((product, index) => (
+            {filteredProducts.map((product, index) => (
               <MotiView
                 key={product.id}
                 from={{ opacity: 0, translateX: -20 }}
