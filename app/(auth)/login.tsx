@@ -15,6 +15,7 @@ import { MotiView } from 'moti';
 import { SupabaseService } from '../../src/services/supabase';
 import { storageService } from '../../src/services/storage';
 import { useAuth } from '../../src/contexts/AuthContext';
+import { validateEmail, validatePhone } from '../../src/utils/helpers';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -42,7 +43,7 @@ export default function LoginScreen() {
       return;
     }
 
-    if (!email.includes('@')) {
+    if (!validateEmail(email.trim())) {
       Alert.alert('Invalid Email', 'Please enter a valid email address');
       return;
     }
@@ -52,8 +53,8 @@ export default function LoginScreen() {
       return;
     }
 
-    if (isSignUp && phone.length < 10) {
-      Alert.alert('Invalid Phone', 'Please enter a valid phone number (10 digits)');
+    if (isSignUp && !validatePhone(phone.replace(/\D/g, '').slice(-10))) {
+      Alert.alert('Invalid Phone', 'Please enter a valid 10-digit Indian mobile number');
       return;
     }
 
