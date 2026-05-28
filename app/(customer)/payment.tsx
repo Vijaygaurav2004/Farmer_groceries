@@ -13,6 +13,8 @@ import { MotiView } from 'moti';
 import { useCart } from '../../src/contexts/CartContext';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { SupabaseService } from '../../src/services/supabase';
+import { DELIVERY_FEE, FREE_DELIVERY_THRESHOLD, MIN_ORDER_VALUE, SUCCESS_MESSAGES } from '../../src/constants';
+import { formatCurrency } from '../../src/utils/helpers';
 
 type PaymentMethod = 'gpay' | 'phonepe' | 'cod';
 
@@ -59,7 +61,7 @@ export default function PaymentScreen() {
     pincode: '',
   });
 
-  const deliveryFee = 30;
+  const deliveryFee = cartTotal >= FREE_DELIVERY_THRESHOLD ? 0 : DELIVERY_FEE;
   const total = cartTotal + deliveryFee;
 
   const handlePlaceOrder = async () => {
@@ -72,6 +74,14 @@ export default function PaymentScreen() {
     if (cart.length === 0) {
       Alert.alert('Empty Cart', 'Please add items to cart');
       router.back();
+      return;
+    }
+
+    if (cartTotal < MIN_ORDER_VALUE) {
+      Alert.alert(
+        'Minimum Order',
+        `Orders must be at least ${formatCurrency(MIN_ORDER_VALUE)}. Add ${formatCurrency(MIN_ORDER_VALUE - cartTotal)} more to continue.`
+      );
       return;
     }
 
@@ -145,7 +155,7 @@ export default function PaymentScreen() {
       clearCart();
       
       Alert.alert(
-        '🎉 Order Placed Successfully!',
+        SUCCESS_MESSAGES.orderPlaced,
         `Your order has been placed with ${selectedMethod === 'cod' ? 'Cash on Delivery' : selectedMethod.toUpperCase()} payment method.`,
         [
           {
@@ -197,16 +207,18 @@ export default function PaymentScreen() {
             </Text>
             <View className="flex-row justify-between mb-1">
               <Text className="text-gray-600">Subtotal</Text>
-              <Text className="text-gray-900 font-semibold">₹{cartTotal}</Text>
+              <Text className="text-gray-900 font-semibold">{formatCurrency(cartTotal)}</Text>
             </View>
             <View className="flex-row justify-between mb-1">
               <Text className="text-gray-600">Delivery Fee</Text>
-              <Text className="text-gray-900 font-semibold">₹{deliveryFee}</Text>
+              <Text className={`font-semibold ${deliveryFee === 0 ? 'text-green-600' : 'text-gray-900'}`}>
+                {deliveryFee === 0 ? 'FREE' : formatCurrency(deliveryFee)}
+              </Text>
             </View>
             <View className="border-t border-primary-200 my-2" />
             <View className="flex-row justify-between">
               <Text className="text-lg font-bold text-gray-900">Total</Text>
-              <Text className="text-lg font-bold text-primary-600">₹{total}</Text>
+              <Text className="text-lg font-bold text-primary-600">{formatCurrency(total)}</Text>
             </View>
           </View>
 
@@ -310,7 +322,7 @@ export default function PaymentScreen() {
             <ActivityIndicator color="white" />
           ) : (
             <Text className="text-white text-base font-semibold">
-              Place Order - ₹{total}
+              Place Order - {formatCurrency(total)}
             </Text>
           )}
         </TouchableOpacity>
