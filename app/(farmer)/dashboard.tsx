@@ -13,7 +13,7 @@ import { useAuth } from '../../src/contexts/AuthContext';
 import { SupabaseService } from '../../src/services/supabase';
 import { Order, Product } from '../../src/types';
 import { LOW_STOCK_THRESHOLD } from '../../src/constants';
-import { getGreeting } from '../../src/utils/helpers';
+import { formatCurrency, getGreeting } from '../../src/utils/helpers';
 
 // No more hardcoded demo data - all from database
 
@@ -143,7 +143,7 @@ export default function FarmerDashboardScreen() {
               >
                 <Text className="text-3xl mb-2">💰</Text>
                 <Text className="text-2xl font-bold text-gray-900">
-                  ₹{stats.totalEarnings}
+                  {formatCurrency(stats.totalEarnings)}
                 </Text>
                 <Text className="text-sm text-gray-600">Total Earnings</Text>
               </MotiView>
