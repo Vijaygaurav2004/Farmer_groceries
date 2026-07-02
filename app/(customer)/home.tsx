@@ -18,19 +18,14 @@ import { useAuth } from '../../src/contexts/AuthContext';
 import { useCart } from '../../src/contexts/CartContext';
 import { SupabaseService } from '../../src/services/supabase';
 import { Product, ProductCategory, Farmer } from '../../src/types';
-import { SORT_OPTIONS, SortOptionId, DEFAULT_COORDINATES } from '../../src/constants';
-import { getGreeting } from '../../src/utils/helpers';
+import { CATEGORIES, SORT_OPTIONS, SortOptionId, DEFAULT_COORDINATES } from '../../src/constants';
+import { formatCurrency, getGreeting } from '../../src/utils/helpers';
 
-const categories: { id: ProductCategory; label: string; icon: string }[] = [
-  { id: 'vegetables', label: 'Vegetables', icon: '🥬' },
-  { id: 'fruits', label: 'Fruits', icon: '🍎' },
-  { id: 'dairy', label: 'Dairy', icon: '🥛' },
-  { id: 'grains', label: 'Grains', icon: '🌾' },
-  { id: 'herbs', label: 'Herbs', icon: '🌿' },
-  { id: 'eggs', label: 'Eggs', icon: '🥚' },
-  { id: 'honey', label: 'Honey', icon: '🍯' },
-  { id: 'other', label: 'Other', icon: '🛒' },
-];
+const categories = CATEGORIES.map(category => ({
+  id: category.id as ProductCategory,
+  label: category.label,
+  icon: category.icon,
+}));
 
 // No more hardcoded demo products - all data comes from database
 
@@ -376,7 +371,7 @@ export default function CustomerHomeScreen() {
                       <View className="flex-row justify-between items-center">
                         <View>
                           <Text className="text-base font-bold text-primary-600">
-                            ₹{product.pricePerUnit}
+                            {formatCurrency(product.pricePerUnit)}
                           </Text>
                           <Text className="text-xs text-gray-500">per {product.unit}</Text>
                         </View>
