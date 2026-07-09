@@ -14,7 +14,7 @@ import { useCart } from '../../src/contexts/CartContext';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { SupabaseService } from '../../src/services/supabase';
 import { DELIVERY_FEE, FREE_DELIVERY_THRESHOLD, MIN_ORDER_VALUE, SUCCESS_MESSAGES } from '../../src/constants';
-import { formatCurrency } from '../../src/utils/helpers';
+import { formatCurrency, validatePincode } from '../../src/utils/helpers';
 
 type PaymentMethod = 'gpay' | 'phonepe' | 'cod';
 
@@ -88,6 +88,11 @@ export default function PaymentScreen() {
     // Validate address
     if (!address.street || !address.city || !address.state || !address.pincode) {
       Alert.alert('Address Required', 'Please fill in all address fields');
+      return;
+    }
+
+    if (!validatePincode(address.pincode)) {
+      Alert.alert('Invalid Pincode', 'Please enter a valid 6-digit Indian pincode');
       return;
     }
 
