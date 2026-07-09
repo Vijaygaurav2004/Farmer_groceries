@@ -65,6 +65,10 @@ export const validateEmail = (email: string): boolean => {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 };
 
+export const validatePincode = (pincode: string): boolean => {
+  return /^[1-9][0-9]{5}$/.test(pincode.trim());
+};
+
 export const generateOrderNumber = (): string => {
   return `ORD${Date.now()}${Math.floor(Math.random() * 1000)}`;
 };
