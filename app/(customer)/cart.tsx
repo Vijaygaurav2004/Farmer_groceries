@@ -10,6 +10,7 @@ import {
 import { useRouter } from 'expo-router';
 import { MotiView } from 'moti';
 import { useCart } from '../../src/contexts/CartContext';
+import { EmptyState } from '../../src/components/Loading';
 import { DELIVERY_FEE, FREE_DELIVERY_THRESHOLD, MIN_ORDER_VALUE } from '../../src/constants';
 import { formatCurrency } from '../../src/utils/helpers';
 
@@ -61,12 +62,12 @@ export default function CartScreen() {
         <View className="px-6 pt-14 pb-4 border-b border-gray-200">
           <Text className="text-2xl font-bold text-gray-900">Cart</Text>
         </View>
-        <View className="flex-1 items-center justify-center">
-          <Text className="text-6xl mb-4">🛒</Text>
-          <Text className="text-xl font-semibold text-gray-900 mb-2">
-            Your cart is empty
-          </Text>
-          <Text className="text-gray-600 mb-6">Add some fresh produce to get started</Text>
+        <EmptyState
+          icon="🛒"
+          title="Your cart is empty"
+          subtitle="Add some fresh produce to get started"
+        />
+        <View className="px-6 pb-10 items-center">
           <TouchableOpacity
             onPress={() => router.push('/(customer)/home')}
             className="bg-primary-600 rounded-xl px-6 py-3"
