@@ -14,7 +14,11 @@ import { useAuth } from '../../src/contexts/AuthContext';
 import { SupabaseService } from '../../src/services/supabase';
 import { Order } from '../../src/types';
 import { DELIVERY_FEE, DEFAULT_COORDINATES } from '../../src/constants';
-import { calculateDistance } from '../../src/utils/helpers';
+import {
+  calculateDistance,
+  formatCurrency,
+  getEstimatedDeliveryMinutes,
+} from '../../src/utils/helpers';
 
 // No more hardcoded demo data - all orders from database
 
@@ -82,17 +86,24 @@ export default function DeliveryOrdersScreen() {
     setDeclinedOrderIds(prev => new Set(prev).add(orderId));
   };
 
-  const getDistanceLabel = (order: Order): string | null => {
+  const getOrderDistanceKm = (order: Order): number | null => {
     const { latitude, longitude } = order.deliveryAddress;
     if (!latitude || !longitude) return null;
 
-    const distanceKm = calculateDistance(
+    return calculateDistance(
       DEFAULT_COORDINATES.latitude,
       DEFAULT_COORDINATES.longitude,
       latitude,
       longitude
     );
-    return `${distanceKm.toFixed(1)} km away`;
+  };
+
+  const getDistanceLabel = (order: Order): string | null => {
+    const distanceKm = getOrderDistanceKm(order);
+    if (distanceKm == null) return null;
+
+    const etaMinutes = getEstimatedDeliveryMinutes(distanceKm);
+    return `${distanceKm.toFixed(1)} km · ~${etaMinutes} mins`;
   };
 
   const handleUpdateStatus = async (orderId: string, currentStatus: string) => {
@@ -223,7 +234,7 @@ export default function DeliveryOrdersScreen() {
 
                   <View className="flex-row justify-between items-center">
                     <Text className="text-lg font-bold text-primary-600">
-                      Earn ₹{DELIVERY_FEE}
+                      Earn {formatCurrency(DELIVERY_FEE)}
                     </Text>
                     <View className="flex-row">
                       <TouchableOpacity
@@ -289,7 +300,7 @@ export default function DeliveryOrdersScreen() {
 
                   <View className="flex-row justify-between items-center pt-3 border-t border-gray-200">
                     <Text className="text-base font-bold text-primary-600">
-                      ₹{DELIVERY_FEE} delivery fee
+                      {formatCurrency(DELIVERY_FEE)} delivery fee
                     </Text>
                     
                     {['assigned', 'picked_up', 'out_for_delivery'].includes(order.orderStatus) && (
