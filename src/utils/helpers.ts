@@ -92,10 +92,21 @@ export const debounce = <T extends (...args: any[]) => any>(
 };
 
 export const ESTIMATED_DELIVERY_MINUTES = 45;
+export const MINUTES_PER_KM = 4;
 
 export const getEstimatedDeliveryTime = (orderDate: Date | string): Date => {
   const dateObj = typeof orderDate === 'string' ? new Date(orderDate) : orderDate;
   return new Date(dateObj.getTime() + ESTIMATED_DELIVERY_MINUTES * 60 * 1000);
+};
+
+export const getEstimatedDeliveryMinutes = (distanceKm: number): number => {
+  if (!Number.isFinite(distanceKm) || distanceKm <= 0) {
+    return ESTIMATED_DELIVERY_MINUTES;
+  }
+  return Math.max(
+    ESTIMATED_DELIVERY_MINUTES,
+    Math.round(distanceKm * MINUTES_PER_KM)
+  );
 };
 
 export const canCancelOrder = (orderStatus: string): boolean => {
