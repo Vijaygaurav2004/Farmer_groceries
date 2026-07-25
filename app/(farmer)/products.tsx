@@ -15,18 +15,13 @@ import { MotiView } from 'moti';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { SupabaseService } from '../../src/services/supabase';
 import { Product, ProductCategory } from '../../src/types';
-import { LOW_STOCK_THRESHOLD } from '../../src/constants';
+import { CATEGORIES, LOW_STOCK_THRESHOLD, SUCCESS_MESSAGES } from '../../src/constants';
 
-const categories: { id: ProductCategory; label: string; icon: string }[] = [
-  { id: 'vegetables', label: 'Vegetables', icon: '🥬' },
-  { id: 'fruits', label: 'Fruits', icon: '🍎' },
-  { id: 'dairy', label: 'Dairy', icon: '🥛' },
-  { id: 'grains', label: 'Grains', icon: '🌾' },
-  { id: 'herbs', label: 'Herbs', icon: '🌿' },
-  { id: 'eggs', label: 'Eggs', icon: '🥚' },
-  { id: 'honey', label: 'Honey', icon: '🍯' },
-  { id: 'other', label: 'Other', icon: '🛒' },
-];
+const categories = CATEGORIES.map(category => ({
+  id: category.id as ProductCategory,
+  label: category.label,
+  icon: category.icon,
+}));
 
 // No more hardcoded demo products - all data from database
 
@@ -98,7 +93,7 @@ export default function FarmerProductsScreen() {
         isAvailable: true,
       });
 
-      Alert.alert('Success', 'Product added successfully');
+      Alert.alert('Success', SUCCESS_MESSAGES.productAdded);
       setShowAddModal(false);
       resetForm();
       loadProducts();
