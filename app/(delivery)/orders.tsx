@@ -148,9 +148,11 @@ export default function DeliveryOrdersScreen() {
   };
 
   const myOrders = orders.filter(o => o.deliveryPartnerId === user?.id);
-  const availableOrders = orders.filter(
-    o => !o.deliveryPartnerId && o.orderStatus === 'packed' && !declinedOrderIds.has(o.id)
-  );
+  const availableOrders = isAvailable
+    ? orders.filter(
+        o => !o.deliveryPartnerId && o.orderStatus === 'packed' && !declinedOrderIds.has(o.id)
+      )
+    : [];
 
   return (
     <View className="flex-1 bg-white">
@@ -164,7 +166,7 @@ export default function DeliveryOrdersScreen() {
             </Text>
           </View>
           <View className="flex-row items-center bg-white/20 px-3 py-2 rounded-full">
-            <Text className="text-white mr-2">Available</Text>
+            <Text className="text-white mr-2">{isAvailable ? 'Online' : 'Offline'}</Text>
             <Switch
               value={isAvailable}
               onValueChange={setIsAvailable}
@@ -172,6 +174,12 @@ export default function DeliveryOrdersScreen() {
             />
           </View>
         </View>
+
+        {!isAvailable && (
+          <Text className="text-primary-100 text-xs mb-3">
+            You are offline — new available orders are hidden until you go online.
+          </Text>
+        )}
 
         {/* Stats */}
         <View className="flex-row justify-between">
@@ -181,7 +189,7 @@ export default function DeliveryOrdersScreen() {
           </View>
           <View className="bg-white/20 rounded-lg px-4 py-2 flex-1 ml-2">
             <Text className="text-white text-xs">Today's Earnings</Text>
-            <Text className="text-white text-2xl font-bold">₹0</Text>
+            <Text className="text-white text-2xl font-bold">{formatCurrency(myOrders.length * DELIVERY_FEE)}</Text>
           </View>
         </View>
       </View>
