@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { View, Text } from 'react-native';
+import { Text } from 'react-native';
 
 export default function CustomerLayout() {
   return (
@@ -61,6 +61,12 @@ export default function CustomerLayout() {
       />
       <Tabs.Screen
         name="product"
+        options={{
+          href: null, // Hide from tab bar
+        }}
+      />
+      <Tabs.Screen
+        name="track-order/[id]"
         options={{
           href: null, // Hide from tab bar
         }}

@@ -195,7 +195,7 @@ export default function FarmerDashboardScreen() {
               <Text className="text-lg font-bold text-gray-900">
                 Recent Orders
               </Text>
-              <TouchableOpacity>
+              <TouchableOpacity onPress={() => router.push('/(farmer)/orders')}>
                 <Text className="text-primary-600 font-semibold">View All</Text>
               </TouchableOpacity>
             </View>
@@ -234,7 +234,7 @@ export default function FarmerDashboardScreen() {
                       {order.items.length} items
                     </Text>
                     <Text className="text-base font-bold text-primary-600">
-                      ₹{order.total}
+                      {formatCurrency(order.total)}
                     </Text>
                   </View>
                 </MotiView>

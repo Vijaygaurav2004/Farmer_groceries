@@ -67,14 +67,12 @@ REM Success message
 echo 🎉 Installation Complete!
 echo.
 echo 📚 Next Steps:
-echo 1. Set up Firebase (see FIREBASE_SETUP.md)
-echo 2. Update src/config/firebase.ts with your credentials
-echo 3. Run: npm start
-echo 4. Scan QR code with Expo Go app
+echo 1. Run: npm start
+echo 2. Scan QR code with Expo Go app
+echo    (Runs in demo mode with sample data - no backend needed.)
+echo    Optional: set EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY in .env for a real backend.
 echo.
-echo 💡 Quick Start: npm start
-echo.
-echo 📖 Read GET_STARTED.md for detailed instructions
+echo 📖 Read README.md for detailed instructions
 echo.
 echo Happy coding! 🚀
 echo.

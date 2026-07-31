@@ -70,6 +70,7 @@ export default function LoginScreen() {
             await SupabaseService.createUser(user.id, {
               email: user.email || email,
               name: name.trim(),
+              phoneNumber: `+91 ${phone.replace(/\D/g, '').slice(-10)}`,
             });
             console.log('Login: User created in database');
           } catch (error) {

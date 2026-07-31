@@ -184,11 +184,11 @@ export default function DeliveryOrdersScreen() {
         {/* Stats */}
         <View className="flex-row justify-between">
           <View className="bg-white/20 rounded-lg px-4 py-2 flex-1 mr-2">
-            <Text className="text-white text-xs">Today's Deliveries</Text>
+            <Text className="text-white text-xs">Active Deliveries</Text>
             <Text className="text-white text-2xl font-bold">{myOrders.length}</Text>
           </View>
           <View className="bg-white/20 rounded-lg px-4 py-2 flex-1 ml-2">
-            <Text className="text-white text-xs">Today's Earnings</Text>
+            <Text className="text-white text-xs">Active Earnings</Text>
             <Text className="text-white text-2xl font-bold">{formatCurrency(myOrders.length * DELIVERY_FEE)}</Text>
           </View>
         </View>

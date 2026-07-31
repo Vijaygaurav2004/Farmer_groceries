@@ -14,6 +14,8 @@ import { SupabaseService } from '../../src/services/supabase';
 import { Order } from '../../src/types';
 import { formatCurrency, formatDate, getTimeAgo } from '../../src/utils/helpers';
 
+const UNKNOWN_STATUS = { label: 'Unknown', color: 'bg-gray-400', icon: '❔' };
+
 const orderStatusConfig = {
   placed: { label: 'Order Placed', color: 'bg-blue-500', icon: '📝' },
   confirmed: { label: 'Confirmed', color: 'bg-indigo-500', icon: '✅' },
@@ -56,8 +58,11 @@ export default function OrdersScreen() {
   }, []);
 
   const loadOrders = async () => {
-    if (!user) return;
-    
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
       const ordersData = await SupabaseService.getCustomerOrders(user.id);
@@ -135,7 +140,7 @@ export default function OrdersScreen() {
         >
           <View className="px-6 py-4">
             {filteredOrders.map((order, index) => {
-              const statusConfig = orderStatusConfig[order.orderStatus];
+              const statusConfig = orderStatusConfig[order.orderStatus] ?? UNKNOWN_STATUS;
               
               return (
                 <MotiView

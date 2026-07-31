@@ -59,11 +59,7 @@ export default function CustomerHomeScreen() {
         productsData = await SupabaseService.getProductsByCategory(selectedCategory);
       } else {
         // Load all available products (limit to 50 for performance)
-        const allProductsPromises = categories.map(cat => 
-          SupabaseService.getProductsByCategory(cat.id)
-        );
-        const allProducts = await Promise.all(allProductsPromises);
-        productsData = allProducts.flat().slice(0, 50);
+        productsData = await SupabaseService.getAllProducts(50);
       }
       
       setProducts(productsData);
@@ -127,7 +123,7 @@ export default function CustomerHomeScreen() {
   const filteredProducts = products
     .filter(product =>
       product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.description.toLowerCase().includes(searchQuery.toLowerCase())
+      (product.description ?? '').toLowerCase().includes(searchQuery.toLowerCase())
     )
     .filter(product => !organicOnly || product.isOrganic)
     .sort((a, b) => {

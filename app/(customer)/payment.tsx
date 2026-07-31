@@ -7,16 +7,18 @@ import {
   Alert,
   ActivityIndicator,
   TextInput,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { MotiView } from 'moti';
 import { useCart } from '../../src/contexts/CartContext';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { SupabaseService } from '../../src/services/supabase';
-import { DELIVERY_FEE, FREE_DELIVERY_THRESHOLD, MIN_ORDER_VALUE, SUCCESS_MESSAGES } from '../../src/constants';
+import { DELIVERY_FEE, FREE_DELIVERY_THRESHOLD, MIN_ORDER_VALUE, SUCCESS_MESSAGES, PAYMENT_METHODS } from '../../src/constants';
 import { formatCurrency, validatePincode } from '../../src/utils/helpers';
 
-type PaymentMethod = 'gpay' | 'phonepe' | 'cod';
+type PaymentMethod = typeof PAYMENT_METHODS[number]['id'];
 
 interface PaymentOption {
   id: PaymentMethod;
@@ -27,22 +29,22 @@ interface PaymentOption {
 
 const paymentOptions: PaymentOption[] = [
   {
-    id: 'gpay',
-    name: 'Google Pay',
-    icon: '💳',
-    description: 'Pay using Google Pay UPI',
-  },
-  {
-    id: 'phonepe',
-    name: 'PhonePe',
-    icon: '📱',
-    description: 'Pay using PhonePe UPI',
-  },
-  {
     id: 'cod',
     name: 'Cash on Delivery',
     icon: '💵',
     description: 'Pay when you receive',
+  },
+  {
+    id: 'upi',
+    name: 'UPI',
+    icon: '📱',
+    description: 'Pay using any UPI app',
+  },
+  {
+    id: 'card',
+    name: 'Card',
+    icon: '💳',
+    description: 'Pay using debit or credit card',
   },
 ];
 
@@ -175,18 +177,10 @@ export default function PaymentScreen() {
       );
     } catch (error) {
       console.error('Error placing order:', error);
-      
-      // For demo mode, still allow order to be placed
-      clearCart();
+
       Alert.alert(
-        '✓ Order Placed (Demo Mode)',
-        'Your order has been placed successfully in demo mode!',
-        [
-          {
-            text: 'Continue Shopping',
-            onPress: () => router.replace('/(customer)/home'),
-          },
-        ]
+        'Order Failed',
+        'We could not place your order. Please check your connection and try again.'
       );
     } finally {
       setLoading(false);
@@ -194,7 +188,10 @@ export default function PaymentScreen() {
   };
 
   return (
-    <View className="flex-1 bg-white">
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      className="flex-1 bg-white"
+    >
       {/* Header */}
       <View className="px-6 pt-14 pb-4 border-b border-gray-200 flex-row items-center">
         <TouchableOpacity onPress={() => router.back()} className="mr-4">
@@ -203,7 +200,7 @@ export default function PaymentScreen() {
         <Text className="text-2xl font-bold text-gray-900">Select Payment Method</Text>
       </View>
 
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+      <ScrollView className="flex-1" showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         <View className="px-6 py-6">
           {/* Order Summary */}
           <View className="bg-primary-50 rounded-xl p-4 mb-6">
@@ -291,7 +288,7 @@ export default function PaymentScreen() {
               placeholderTextColor="#9CA3AF"
             />
             
-            <View className="flex-row space-x-3">
+            <View className="flex-row gap-3">
               <TextInput
                 placeholder="State *"
                 value={address.state}
@@ -332,12 +329,17 @@ export default function PaymentScreen() {
           )}
         </TouchableOpacity>
 
-        {selectedMethod !== 'cod' && (
+        {selectedMethod === 'upi' && (
           <Text className="text-center text-xs text-gray-500 mt-2">
-            You will be redirected to {selectedMethod === 'gpay' ? 'Google Pay' : 'PhonePe'} to complete payment
+            You will be redirected to your UPI app to complete payment
+          </Text>
+        )}
+        {selectedMethod === 'card' && (
+          <Text className="text-center text-xs text-gray-500 mt-2">
+            You will be redirected to a secure page to complete payment
           </Text>
         )}
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 }

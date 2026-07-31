@@ -13,6 +13,8 @@ import { MotiView } from 'moti';
 import { SupabaseService } from '../../../src/services/supabase';
 import { useCart } from '../../../src/contexts/CartContext';
 import { Product } from '../../../src/types';
+import { CATEGORIES } from '../../../src/constants';
+import { formatCurrency } from '../../../src/utils/helpers';
 
 export default function ProductDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -42,12 +44,8 @@ export default function ProductDetailScreen() {
 
   const handleAddToCart = () => {
     if (!product) return;
-    
-    addToCart({
-      productId: product.id,
-      quantity,
-      product,
-    });
+
+    addToCart(product, quantity);
 
     setAddedToCart(true);
     setTimeout(() => setAddedToCart(false), 2000);
@@ -97,11 +95,19 @@ export default function ProductDetailScreen() {
           animate={{ opacity: 1, scale: 1 }}
           transition={{ type: 'timing', duration: 400 }}
         >
-          <Image
-            source={{ uri: product.images[0] || 'https://via.placeholder.com/400' }}
-            className="w-full h-80"
-            resizeMode="cover"
-          />
+          {product.images && product.images.length > 0 ? (
+            <Image
+              source={{ uri: product.images[0] }}
+              className="w-full h-80"
+              resizeMode="cover"
+            />
+          ) : (
+            <View className="w-full h-80 bg-gray-100 items-center justify-center">
+              <Text className="text-8xl">
+                {CATEGORIES.find(c => c.id === product.category)?.icon || '🥬'}
+              </Text>
+            </View>
+          )}
         </MotiView>
 
         <View className="px-6 py-6">
@@ -128,7 +134,7 @@ export default function ProductDetailScreen() {
               
               <View className="items-end">
                 <Text className="text-3xl font-bold text-primary-600">
-                  ₹{product.pricePerUnit}
+                  {formatCurrency(product.pricePerUnit)}
                 </Text>
                 <Text className="text-sm text-gray-500">
                   per {product.unit}
@@ -137,10 +143,10 @@ export default function ProductDetailScreen() {
             </View>
 
             {/* Stock */}
-            <View className={`${product.stockQuantity > 0 ? 'bg-green-50' : 'bg-red-50'} px-4 py-3 rounded-lg mb-6`}>
-              <Text className={`text-sm font-semibold ${product.stockQuantity > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                {product.stockQuantity > 0
-                  ? `${product.stockQuantity} ${product.unit} available`
+            <View className={`${product.stock > 0 ? 'bg-green-50' : 'bg-red-50'} px-4 py-3 rounded-lg mb-6`}>
+              <Text className={`text-sm font-semibold ${product.stock > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                {product.stock > 0
+                  ? `${product.stock} ${product.unit} available`
                   : 'Out of Stock'}
               </Text>
             </View>
@@ -164,7 +170,7 @@ export default function ProductDetailScreen() {
             </View>
 
             {/* Quantity Selector */}
-            {product.stockQuantity > 0 && (
+            {product.stock > 0 && (
               <View className="mb-6">
                 <Text className="text-base font-semibold text-gray-900 mb-3">Quantity</Text>
                 <View className="flex-row items-center">
@@ -174,22 +180,22 @@ export default function ProductDetailScreen() {
                   >
                     <Text className="text-2xl text-gray-700">−</Text>
                   </TouchableOpacity>
-                  
+
                   <Text className="text-2xl font-bold text-gray-900 mx-8">
                     {quantity}
                   </Text>
-                  
+
                   <TouchableOpacity
-                    onPress={() => setQuantity(Math.min(product.stockQuantity, quantity + 1))}
+                    onPress={() => setQuantity(Math.min(product.stock, quantity + 1))}
                     className="bg-gray-200 w-12 h-12 rounded-lg items-center justify-center"
                   >
                     <Text className="text-2xl text-gray-700">+</Text>
                   </TouchableOpacity>
-                  
+
                   <View className="ml-auto">
                     <Text className="text-sm text-gray-500">Total</Text>
                     <Text className="text-xl font-bold text-primary-600">
-                      ₹{(product.pricePerUnit * quantity).toFixed(2)}
+                      {formatCurrency(product.pricePerUnit * quantity)}
                     </Text>
                   </View>
                 </View>
@@ -200,7 +206,7 @@ export default function ProductDetailScreen() {
       </ScrollView>
 
       {/* Add to Cart Button */}
-      {product.stockQuantity > 0 && (
+      {product.stock > 0 && (
         <MotiView
           from={{ opacity: 0, translateY: 50 }}
           animate={{ opacity: 1, translateY: 0 }}

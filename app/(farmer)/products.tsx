@@ -10,12 +10,15 @@ import {
   TextInput,
   Alert,
   Modal,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { MotiView } from 'moti';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { SupabaseService } from '../../src/services/supabase';
 import { Product, ProductCategory } from '../../src/types';
 import { CATEGORIES, LOW_STOCK_THRESHOLD, SUCCESS_MESSAGES } from '../../src/constants';
+import { formatCurrency } from '../../src/utils/helpers';
 
 const categories = CATEGORIES.map(category => ({
   id: category.id as ProductCategory,
@@ -139,7 +142,7 @@ export default function FarmerProductsScreen() {
       <View className="px-6 pt-14 pb-4 border-b border-gray-200">
         <View className="flex-row justify-between items-center mb-3">
           <Text className="text-2xl font-bold text-gray-900">
-            My Products ({products.length})
+            My Products ({searchQuery.trim() ? filteredProducts.length : products.length})
           </Text>
           <TouchableOpacity
             onPress={() => setShowAddModal(true)}
@@ -230,7 +233,7 @@ export default function FarmerProductsScreen() {
                   
                   <View className="flex-row items-center mb-2">
                     <Text className="text-sm text-gray-600 mr-3">
-                      ₹{product.pricePerUnit}/{product.unit}
+                      {formatCurrency(product.pricePerUnit)}/{product.unit}
                     </Text>
                     <Text
                       className={`text-sm ${
@@ -281,7 +284,10 @@ export default function FarmerProductsScreen() {
         animationType="slide"
         presentationStyle="pageSheet"
       >
-        <View className="flex-1 bg-white">
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          className="flex-1 bg-white"
+        >
           <View className="px-6 pt-14 pb-4 border-b border-gray-200 flex-row justify-between items-center">
             <Text className="text-xl font-bold text-gray-900">Add Product</Text>
             <TouchableOpacity onPress={() => setShowAddModal(false)}>
@@ -289,7 +295,10 @@ export default function FarmerProductsScreen() {
             </TouchableOpacity>
           </View>
 
-          <ScrollView className="flex-1 px-6 py-4">
+          <ScrollView
+            className="flex-1 px-6 py-4"
+            keyboardShouldPersistTaps="handled"
+          >
             <View className="mb-4">
               <Text className="text-sm font-semibold text-gray-700 mb-2">Product Name *</Text>
               <TextInput
@@ -388,7 +397,7 @@ export default function FarmerProductsScreen() {
               <Text className="text-white text-base font-semibold">Add Product</Text>
             </TouchableOpacity>
           </ScrollView>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );

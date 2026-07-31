@@ -60,13 +60,8 @@ export default function RoleSelectScreen() {
     try {
       console.log('Setting role:', selectedRole);
       await setRole(selectedRole);
-      console.log('Role set successfully, waiting for state to persist...');
-      
-      // Wait 500ms to ensure AsyncStorage writes complete and AuthContext updates
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      console.log('State persisted, navigating to dashboard...');
-      
+      console.log('Role set successfully, navigating to dashboard...');
+
       // Navigate based on role
       if (selectedRole === 'customer') {
         console.log('Navigating to customer home');
@@ -108,7 +103,7 @@ export default function RoleSelectScreen() {
         </MotiView>
 
         {/* Role Options */}
-        <View className="space-y-4">
+        <View className="gap-4">
           {roleOptions.map((option, index) => (
             <MotiView
               key={option.role}

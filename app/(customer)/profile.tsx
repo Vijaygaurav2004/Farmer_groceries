@@ -7,20 +7,23 @@ import {
   Alert,
   TextInput,
   Modal,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { MotiView } from 'moti';
 import { useAuth } from '../../src/contexts/AuthContext';
+import { SupabaseService } from '../../src/services/supabase';
 import { APP_CONFIG, SUCCESS_MESSAGES } from '../../src/constants';
 import { validatePhone } from '../../src/utils/helpers';
 
 export default function ProfileScreen() {
-  const { user, signOut } = useAuth();
+  const { user, signOut, refreshUser } = useAuth();
   const router = useRouter();
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [addressModalVisible, setAddressModalVisible] = useState(false);
   const [name, setName] = useState(user?.name || '');
   const [phone, setPhone] = useState(user?.phoneNumber || '');
+  const [saving, setSaving] = useState(false);
 
   const handleSignOut = () => {
     Alert.alert(
@@ -40,7 +43,7 @@ export default function ProfileScreen() {
     );
   };
 
-  const handleSaveProfile = () => {
+  const handleSaveProfile = async () => {
     if (!name.trim()) {
       Alert.alert('Missing Name', 'Please enter your full name');
       return;
@@ -51,8 +54,20 @@ export default function ProfileScreen() {
       return;
     }
 
-    Alert.alert('Success', SUCCESS_MESSAGES.profileUpdated);
-    setEditModalVisible(false);
+    if (!user) return;
+
+    setSaving(true);
+    try {
+      await SupabaseService.updateUser(user.id, { name: name.trim(), phoneNumber: phone });
+      await refreshUser();
+      Alert.alert('Success', SUCCESS_MESSAGES.profileUpdated);
+      setEditModalVisible(false);
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      Alert.alert('Error', 'Failed to update profile. Please try again.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const menuItems = [
@@ -221,9 +236,14 @@ export default function ProfileScreen() {
 
             <TouchableOpacity
               onPress={handleSaveProfile}
-              className="bg-primary-600 rounded-xl py-4 items-center"
+              disabled={saving}
+              className={`bg-primary-600 rounded-xl py-4 items-center ${saving ? 'opacity-50' : ''}`}
             >
-              <Text className="text-white font-semibold text-base">Save Changes</Text>
+              {saving ? (
+                <ActivityIndicator color="white" />
+              ) : (
+                <Text className="text-white font-semibold text-base">Save Changes</Text>
+              )}
             </TouchableOpacity>
           </View>
         </View>
