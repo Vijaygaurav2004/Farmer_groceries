@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -9,10 +9,21 @@ import {
 import { useRouter } from 'expo-router';
 import { MotiView } from 'moti';
 import { useAuth } from '../../src/contexts/AuthContext';
+import { SupabaseService } from '../../src/services/supabase';
+import { APP_CONFIG } from '../../src/constants';
 
 export default function DeliveryProfileScreen() {
   const { user, signOut } = useAuth();
   const router = useRouter();
+  const [deliveredCount, setDeliveredCount] = useState(0);
+
+  useEffect(() => {
+    if (!user) return;
+
+    SupabaseService.getDeliveryPartnerDeliveredOrders(user.id)
+      .then(orders => setDeliveredCount(orders.length))
+      .catch(error => console.error('Error loading delivered orders:', error));
+  }, [user]);
 
   const handleSignOut = () => {
     Alert.alert(
@@ -88,7 +99,9 @@ export default function DeliveryProfileScreen() {
           <Text className="text-white text-2xl font-bold mb-1">
             {user?.name || 'Delivery Partner'}
           </Text>
-          <Text className="text-primary-100">{user?.phoneNumber}</Text>
+          {user?.phoneNumber && (
+            <Text className="text-primary-100">{user.phoneNumber}</Text>
+          )}
           <View className="bg-green-500 px-4 py-1 rounded-full mt-2">
             <Text className="text-white text-xs font-semibold">Active</Text>
           </View>
@@ -98,14 +111,10 @@ export default function DeliveryProfileScreen() {
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         <View className="px-6 py-6">
           {/* Stats */}
-          <View className="flex-row justify-between mb-6">
-            <View className="bg-blue-50 rounded-xl p-4 flex-1 mr-2">
+          <View className="mb-6">
+            <View className="bg-blue-50 rounded-xl p-4">
               <Text className="text-sm text-gray-600 mb-1">Deliveries</Text>
-              <Text className="text-2xl font-bold text-gray-900">0</Text>
-            </View>
-            <View className="bg-green-50 rounded-xl p-4 flex-1 ml-2">
-              <Text className="text-sm text-gray-600 mb-1">Rating</Text>
-              <Text className="text-2xl font-bold text-gray-900">0.0 ⭐</Text>
+              <Text className="text-2xl font-bold text-gray-900">{deliveredCount}</Text>
             </View>
           </View>
 
@@ -158,7 +167,7 @@ export default function DeliveryProfileScreen() {
 
           {/* Version */}
           <Text className="text-center text-gray-400 text-sm mt-6">
-            Version 1.0.0
+            {APP_CONFIG.name} v{APP_CONFIG.version}
           </Text>
         </View>
       </ScrollView>

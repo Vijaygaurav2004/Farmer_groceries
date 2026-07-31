@@ -7,7 +7,9 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue.svg)](https://www.typescriptlang.org/)
 [![Supabase](https://img.shields.io/badge/Supabase-Latest-3ECF8E.svg)](https://supabase.com/)
 
-A production-ready mobile application that eliminates middlemen in the agricultural supply chain, enabling farmers to sell directly to consumers while providing delivery partners with flexible earning opportunities.
+A mobile app that eliminates middlemen in the agricultural supply chain, enabling farmers to sell directly to consumers while providing delivery partners with flexible earning opportunities.
+
+> **Demo mode by default:** run it with zero setup — no Supabase project, no API keys. The app ships with seeded sample data (products, farmers, orders) stored on-device. Point it at a real Supabase project via `.env` when you're ready.
 
 ---
 
@@ -51,7 +53,7 @@ Farmer → Delivery Partner → Consumer
 - **Product Details**: High-quality images, detailed descriptions, farmer information
 - **Shopping Cart**: Easy cart management with quantity controls
 - **Order Tracking**: Real-time order status with 7-step progress tracker
-- **Multiple Payments**: Cash on Delivery, GPay, PhonePe
+- **Multiple Payments**: Cash on Delivery, UPI, Card
 - **Save Addresses**: Manage multiple delivery addresses
 - **Profile Management**: Edit personal information, view order history
 
@@ -67,10 +69,8 @@ Farmer → Delivery Partner → Consumer
 
 - **Available Orders**: View and accept customer orders from farmers
 - **Order Status Updates**: Track orders through the delivery workflow
-- **Map Navigation**: Google Maps/Apple Maps integration with directions
-- **Call Customer**: Quick contact button for customer communication
+- **Delivery Route**: Active-delivery screen with pickup and drop details
 - **Earnings Dashboard**: Track today's, weekly, and monthly earnings
-- **Flexible Hours**: Toggle availability on/off
 
 ---
 
@@ -85,14 +85,8 @@ Farmer → Delivery Partner → Consumer
 - **Expo Router 6.x** - File-based routing
 
 ### Backend
-- **Supabase Auth** - Email/password authentication
-- **PostgreSQL** - Relational database with real-time subscriptions
-- **Supabase Storage** - Image hosting
-- **Row Level Security** - Database-level security
-
-### Integrations
-- **Google Maps API** - Navigation & location services
-- **React Native Maps** - Native map components
+- **Demo mode (default)** - Seeded in-app data store, persisted with AsyncStorage
+- **Supabase (optional)** - Auth, PostgreSQL, and Storage when configured via `.env`
 
 ---
 
@@ -119,24 +113,17 @@ cd farmer-groceries
 npm install
 ```
 
-3. **Set up environment variables:**
-
-Create a `.env` file in the root:
-
-```env
-EXPO_PUBLIC_SUPABASE_URL=your_supabase_project_url
-EXPO_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-```
-
-4. **Start the development server:**
+3. **Start the development server:**
 ```bash
 npm start
 ```
 
-5. **Run on your device:**
+4. **Run on your device:**
 - Open **Expo Go** app on your phone
 - Scan the QR code displayed in terminal
 - App will load automatically
+
+That's it — the app runs in **demo mode** with sample data. Sign up with any email/password, pick a role, and explore. To use a real backend instead, copy `.env.example` to `.env` and fill in your Supabase credentials (see below).
 
 ---
 
@@ -190,7 +177,9 @@ farmer-groceries/
 
 ---
 
-## 🔐 Supabase Setup
+## 🔐 Supabase Setup (Optional)
+
+Without this, the app runs entirely in demo mode. Configure it only when you want real multi-user data.
 
 ### 1. Create a Supabase Project
 - Go to [supabase.com](https://supabase.com)
@@ -232,7 +221,7 @@ For production, enable RLS on all tables:
 4. Add items to cart
 5. Go to cart and checkout
 6. Enter delivery address
-7. Select payment method (COD/GPay/PhonePe)
+7. Select payment method (COD/UPI/Card)
 8. Place order
 9. Track order from Orders page
 10. View order progress
@@ -252,10 +241,9 @@ For production, enable RLS on all tables:
 3. Accept an order
 4. Order moves to "My Deliveries"
 5. Update order status (Picked Up → Out for Delivery)
-6. Use map to navigate to customer
-7. Click "Navigate" to open Google Maps
-8. Mark order as delivered
-9. View earnings
+6. Check the Route tab for pickup and drop details
+7. Mark order as delivered
+8. View earnings
 
 ---
 
@@ -278,16 +266,17 @@ This project contributes to **UN Sustainable Development Goals:**
 - ✅ Product browsing and management
 - ✅ Shopping cart and checkout
 - ✅ Order tracking with progress tracker
-- ✅ Map navigation for delivery partners
+- ✅ Delivery workflow with route details
 - ✅ Profile management for all roles
-- ✅ Real-time data from Supabase
+- ✅ Zero-setup demo mode with seeded data (optional Supabase backend)
 
 ### 📅 Phase 2: Enhancement (Coming Soon)
 - Push notifications for order updates
 - In-app chat between customers and delivery partners
 - Ratings & reviews for products and farmers
+- Map navigation with live location for delivery partners
 - Advanced search and filters
-- Image upload optimization
+- Image upload for products
 
 ### 📅 Phase 3: Scale
 - Multi-language support

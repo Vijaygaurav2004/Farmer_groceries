@@ -1,15 +1,8 @@
-import { useEffect } from 'react';
-import { useRouter } from 'expo-router';
 import { View, ActivityIndicator } from 'react-native';
 
 export default function Index() {
-  const router = useRouter();
-
-  useEffect(() => {
-    // Redirect to login by default
-    router.replace('/(auth)/login');
-  }, []);
-
+  // Navigation is handled by the root _layout.tsx guard, which redirects
+  // logged-out users to login and logged-in users to their role home.
   return (
     <View className="flex-1 items-center justify-center bg-white">
       <ActivityIndicator size="large" color="#22c55e" />

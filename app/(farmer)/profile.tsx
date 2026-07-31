@@ -9,6 +9,7 @@ import {
 import { useRouter } from 'expo-router';
 import { MotiView } from 'moti';
 import { useAuth } from '../../src/contexts/AuthContext';
+import { APP_CONFIG } from '../../src/constants';
 
 export default function FarmerProfileScreen() {
   const { user, signOut } = useAuth();
@@ -88,11 +89,9 @@ export default function FarmerProfileScreen() {
           <Text className="text-white text-2xl font-bold mb-1">
             {user?.name || 'Farmer'}
           </Text>
-          <Text className="text-primary-100">{user?.phoneNumber}</Text>
-          <View className="bg-yellow-500 px-4 py-1 rounded-full mt-2 flex-row items-center">
-            <Text className="text-white text-xs font-semibold mr-1">Verified</Text>
-            <Text className="text-white">✓</Text>
-          </View>
+          {user?.phoneNumber && (
+            <Text className="text-primary-100">{user.phoneNumber}</Text>
+          )}
         </View>
       </View>
 
@@ -147,7 +146,7 @@ export default function FarmerProfileScreen() {
 
           {/* Version */}
           <Text className="text-center text-gray-400 text-sm mt-6">
-            Version 1.0.0
+            {APP_CONFIG.name} v{APP_CONFIG.version}
           </Text>
         </View>
       </ScrollView>

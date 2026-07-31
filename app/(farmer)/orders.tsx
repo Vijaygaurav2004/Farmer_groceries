@@ -12,8 +12,16 @@ import { MotiView } from 'moti';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { SupabaseService } from '../../src/services/supabase';
 import { Order, OrderStatus } from '../../src/types';
+import { formatCurrency } from '../../src/utils/helpers';
 
-const orderStatusConfig = {
+interface OrderStatusConfigEntry {
+  label: string;
+  color: string;
+  icon: string;
+  nextStatus: OrderStatus | null;
+}
+
+const orderStatusConfig: Partial<Record<OrderStatus, OrderStatusConfigEntry>> = {
   placed: { label: 'New Order', color: 'bg-blue-500', icon: '📝', nextStatus: 'confirmed' },
   confirmed: { label: 'Confirmed', color: 'bg-indigo-500', icon: '✅', nextStatus: 'packed' },
   packed: { label: 'Packed', color: 'bg-purple-500', icon: '📦', nextStatus: null },
@@ -60,9 +68,10 @@ export default function FarmerOrdersScreen() {
 
   const handleUpdateStatus = async (orderId: string, currentStatus: OrderStatus) => {
     const config = orderStatusConfig[currentStatus];
-    if (!config.nextStatus) return;
+    const nextStatus = config?.nextStatus;
+    if (!nextStatus) return;
 
-    const nextStatusLabel = orderStatusConfig[config.nextStatus].label;
+    const nextStatusLabel = orderStatusConfig[nextStatus]?.label ?? nextStatus;
 
     Alert.alert(
       'Update Order Status',
@@ -73,7 +82,7 @@ export default function FarmerOrdersScreen() {
           text: 'Update',
           onPress: async () => {
             try {
-              await SupabaseService.updateOrderStatus(orderId, config.nextStatus as OrderStatus);
+              await SupabaseService.updateOrderStatus(orderId, nextStatus);
               loadOrders();
               Alert.alert('Success', 'Order status updated');
             } catch (error) {
@@ -181,8 +190,13 @@ export default function FarmerOrdersScreen() {
         >
           <View className="px-6 py-4">
             {filteredOrders.map((order, index) => {
-              const statusConfig = orderStatusConfig[order.orderStatus];
-              
+              const statusConfig = orderStatusConfig[order.orderStatus] ?? {
+                label: order.orderStatus,
+                color: 'bg-gray-400',
+                icon: '❔',
+                nextStatus: null,
+              };
+
               return (
                 <MotiView
                   key={order.id}
@@ -222,7 +236,7 @@ export default function FarmerOrdersScreen() {
                           {item.productName} x {item.quantity}
                         </Text>
                         <Text className="text-sm font-semibold text-gray-900">
-                          ₹{item.total}
+                          {formatCurrency(item.total)}
                         </Text>
                       </View>
                     ))}
@@ -233,17 +247,17 @@ export default function FarmerOrdersScreen() {
                     <View>
                       <Text className="text-sm text-gray-600">Total Amount</Text>
                       <Text className="text-lg font-bold text-primary-600">
-                        ₹{order.total}
+                        {formatCurrency(order.total)}
                       </Text>
                     </View>
-                    
+
                     {statusConfig.nextStatus && (
                       <TouchableOpacity
                         onPress={() => handleUpdateStatus(order.id, order.orderStatus)}
                         className="bg-primary-600 px-4 py-2 rounded-lg"
                       >
                         <Text className="text-white font-semibold">
-                          Mark {orderStatusConfig[statusConfig.nextStatus].label}
+                          Mark {orderStatusConfig[statusConfig.nextStatus]?.label ?? statusConfig.nextStatus}
                         </Text>
                       </TouchableOpacity>
                     )}

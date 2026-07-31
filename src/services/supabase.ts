@@ -1,4 +1,6 @@
 import { supabase, isSupabaseConfigured } from '../config/supabase';
+import { demoStore } from './demoStore';
+import { storageService } from './storage';
 import { 
   User, 
   UserRole, 
@@ -109,28 +111,42 @@ export class SupabaseService {
   // User Management
   static async createUser(userId: string, data: Partial<User>): Promise<void> {
     if (!isSupabaseConfigured) {
-      // Demo mode - data is stored in AsyncStorage by AuthContext
+      // Demo mode - persist to AsyncStorage so getUser can read it back
+      await storageService.saveUser({
+        id: userId,
+        email: data.email || '',
+        role: data.role,
+        name: data.name,
+        phoneNumber: data.phoneNumber,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as User);
       return;
     }
-    
+
     const { error } = await supabase
       .from('users')
       .insert({
         id: userId,
-        ...data,
+        email: data.email,
+        name: data.name,
+        role: data.role,
+        phone_number: data.phoneNumber,
+        profile_image: data.profileImage,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       });
-    
+
     if (error) throw error;
   }
 
   static async getUser(userId: string): Promise<User | null> {
     if (!isSupabaseConfigured) {
-      // Demo mode - return null (data is in AsyncStorage)
-      return null;
+      // Demo mode - read from AsyncStorage
+      const cached = await storageService.getUser();
+      return cached && cached.id === userId ? cached : null;
     }
-    
+
     const { data, error } = await supabase
       .from('users')
       .select('*')
@@ -150,6 +166,7 @@ export class SupabaseService {
       role: data.role,
       name: data.name,
       profileImage: data.profile_image,
+      phoneNumber: data.phone_number,
       createdAt: new Date(data.created_at),
       updatedAt: new Date(data.updated_at),
     } as User;
@@ -157,21 +174,29 @@ export class SupabaseService {
 
   static async updateUser(userId: string, data: Partial<User>): Promise<void> {
     if (!isSupabaseConfigured) {
-      // Demo mode - data is stored in AsyncStorage by AuthContext
+      // Demo mode - merge into the AsyncStorage user
+      const cached = await storageService.getUser();
+      if (cached && cached.id === userId) {
+        await storageService.saveUser({ ...cached, ...data, updatedAt: new Date() });
+      }
       return;
     }
-    
+
     const updateData: any = {
       ...data,
       updated_at: new Date().toISOString(),
     };
-    
+
     // Convert camelCase to snake_case for database
     if (data.profileImage) {
       updateData.profile_image = data.profileImage;
       delete updateData.profileImage;
     }
-    
+    if (data.phoneNumber) {
+      updateData.phone_number = data.phoneNumber;
+      delete updateData.phoneNumber;
+    }
+
     const { error } = await supabase
       .from('users')
       .update(updateData)
@@ -182,6 +207,11 @@ export class SupabaseService {
 
   // Farmer Management
   static async createFarmerProfile(userId: string, data: Partial<Farmer>): Promise<void> {
+    if (!isSupabaseConfigured) {
+      // Demo mode - farmer data lives on the stored user; nothing extra to create
+      return;
+    }
+
     const { error } = await supabase
       .from('farmers')
       .insert({
@@ -201,6 +231,10 @@ export class SupabaseService {
   }
 
   static async getFarmer(farmerId: string): Promise<Farmer | null> {
+    if (!isSupabaseConfigured) {
+      return demoStore.getFarmer(farmerId);
+    }
+
     const { data, error } = await supabase
       .from('farmers')
       .select('*')
@@ -233,10 +267,9 @@ export class SupabaseService {
 
   static async getNearbyFarmers(latitude: number, longitude: number, radiusKm: number = 50): Promise<Farmer[]> {
     if (!isSupabaseConfigured) {
-      // Demo mode - return empty array
-      return [];
+      return demoStore.getFarmers();
     }
-    
+
     const { data, error } = await supabase
       .from('farmers')
       .select('*')
@@ -270,10 +303,11 @@ export class SupabaseService {
   // Product Management
   static async createProduct(data: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
     if (!isSupabaseConfigured) {
-      // Demo mode - return a fake ID
-      return `demo_product_${Date.now()}`;
+      const id = `demo_product_${Date.now()}`;
+      await demoStore.addProduct({ ...data, id, createdAt: new Date(), updatedAt: new Date() });
+      return id;
     }
-    
+
     const { data: product, error } = await supabase
       .from('products')
       .insert({
@@ -300,6 +334,10 @@ export class SupabaseService {
   }
 
   static async getProduct(productId: string): Promise<Product | null> {
+    if (!isSupabaseConfigured) {
+      return demoStore.getProduct(productId);
+    }
+
     const { data, error } = await supabase
       .from('products')
       .select('*')
@@ -334,15 +372,14 @@ export class SupabaseService {
 
   static async getFarmerProducts(farmerId: string): Promise<Product[]> {
     if (!isSupabaseConfigured) {
-      // Demo mode - return empty array
-      return [];
+      return demoStore.getFarmerProducts();
     }
-    
+
+    // Farmer's own inventory - include unavailable products so they can be toggled back
     const { data, error} = await supabase
       .from('products')
       .select('*')
       .eq('farmer_id', farmerId)
-      .eq('is_available', true)
       .order('created_at', { ascending: false });
     
     if (error) throw error;
@@ -366,12 +403,44 @@ export class SupabaseService {
     }));
   }
 
+  static async getAllProducts(limit: number = 50): Promise<Product[]> {
+    if (!isSupabaseConfigured) {
+      return demoStore.getAvailableProducts();
+    }
+
+    const { data, error } = await supabase
+      .from('products')
+      .select('*')
+      .eq('is_available', true)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    if (error) throw error;
+
+    return (data || []).map(item => ({
+      id: item.id,
+      farmerId: item.farmer_id,
+      farmerName: item.farmer_name,
+      name: item.name,
+      description: item.description,
+      category: item.category,
+      images: item.images || [],
+      unit: item.unit,
+      pricePerUnit: item.price_per_unit,
+      stock: item.stock,
+      harvestDate: new Date(item.harvest_date),
+      isOrganic: item.is_organic,
+      isAvailable: item.is_available,
+      createdAt: new Date(item.created_at),
+      updatedAt: new Date(item.updated_at),
+    }));
+  }
+
   static async getProductsByCategory(category: string): Promise<Product[]> {
     if (!isSupabaseConfigured) {
-      // Demo mode - return empty array
-      return [];
+      return demoStore.getAvailableProducts(category);
     }
-    
+
     const { data, error } = await supabase
       .from('products')
       .select('*')
@@ -403,10 +472,9 @@ export class SupabaseService {
 
   static async updateProduct(productId: string, data: Partial<Product>): Promise<void> {
     if (!isSupabaseConfigured) {
-      // Demo mode - simulate success
-      return;
+      return demoStore.updateProduct(productId, data);
     }
-    
+
     const updateData: any = {
       updated_at: new Date().toISOString(),
     };
@@ -434,6 +502,10 @@ export class SupabaseService {
   }
 
   static async deleteProduct(productId: string): Promise<void> {
+    if (!isSupabaseConfigured) {
+      return demoStore.deleteProduct(productId);
+    }
+
     const { error } = await supabase
       .from('products')
       .delete()
@@ -445,10 +517,9 @@ export class SupabaseService {
   // Order Management
   static async createOrder(data: Omit<Order, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
     if (!isSupabaseConfigured) {
-      // Demo mode - return a fake ID
-      return `demo_order_${Date.now()}`;
+      return demoStore.createOrder(data);
     }
-    
+
     const { data: order, error } = await supabase
       .from('orders')
       .insert({
@@ -478,6 +549,10 @@ export class SupabaseService {
   }
 
   static async getOrder(orderId: string): Promise<Order | null> {
+    if (!isSupabaseConfigured) {
+      return demoStore.getOrder(orderId);
+    }
+
     const { data, error } = await supabase
       .from('orders')
       .select('*')
@@ -515,10 +590,9 @@ export class SupabaseService {
 
   static async getCustomerOrders(customerId: string): Promise<Order[]> {
     if (!isSupabaseConfigured) {
-      // Demo mode - return empty array
-      return [];
+      return demoStore.getCustomerOrders();
     }
-    
+
     const { data, error } = await supabase
       .from('orders')
       .select('*')
@@ -551,10 +625,9 @@ export class SupabaseService {
 
   static async getFarmerOrders(farmerId: string): Promise<Order[]> {
     if (!isSupabaseConfigured) {
-      // Demo mode - return empty array
-      return [];
+      return demoStore.getFarmerOrders();
     }
-    
+
     const { data, error } = await supabase
       .from('orders')
       .select('*')
@@ -587,10 +660,9 @@ export class SupabaseService {
 
   static async getDeliveryPartnerOrders(deliveryPartnerId: string): Promise<Order[]> {
     if (!isSupabaseConfigured) {
-      // Demo mode - return empty array
-      return [];
+      return demoStore.getDeliveryPartnerOrders();
     }
-    
+
     // Get orders that are either:
     // 1. Assigned to this delivery partner
     // 2. Packed and not assigned to anyone (available for pickup)
@@ -625,7 +697,47 @@ export class SupabaseService {
     }));
   }
 
+  static async getDeliveryPartnerDeliveredOrders(deliveryPartnerId: string): Promise<Order[]> {
+    if (!isSupabaseConfigured) {
+      return demoStore.getDeliveredOrders();
+    }
+
+    const { data, error } = await supabase
+      .from('orders')
+      .select('*')
+      .eq('delivery_partner_id', deliveryPartnerId)
+      .eq('order_status', 'delivered')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    return (data || []).map(item => ({
+      id: item.id,
+      orderNumber: item.order_number,
+      customerId: item.customer_id,
+      customerName: item.customer_name,
+      farmerId: item.farmer_id,
+      farmerName: item.farmer_name,
+      deliveryPartnerId: item.delivery_partner_id,
+      items: item.items || [],
+      subtotal: item.subtotal,
+      deliveryFee: item.delivery_fee,
+      total: item.total,
+      deliveryAddress: item.delivery_address,
+      paymentMethod: item.payment_method,
+      paymentStatus: item.payment_status,
+      orderStatus: item.order_status,
+      statusHistory: item.status_history || [],
+      createdAt: new Date(item.created_at),
+      updatedAt: new Date(item.updated_at),
+    }));
+  }
+
   static async updateOrder(orderId: string, data: Partial<Order>): Promise<void> {
+    if (!isSupabaseConfigured) {
+      return demoStore.updateOrder(orderId, data);
+    }
+
     const updateData: any = {
       updated_at: new Date().toISOString(),
     };
@@ -656,6 +768,10 @@ export class SupabaseService {
   }
 
   static async updateOrderStatus(orderId: string, status: Order['orderStatus'], note?: string): Promise<void> {
+    if (!isSupabaseConfigured) {
+      return demoStore.updateOrderStatus(orderId, status, note);
+    }
+
     const order = await this.getOrder(orderId);
     if (!order) return;
 
@@ -682,6 +798,10 @@ export class SupabaseService {
 
   // Review Management
   static async createReview(data: Omit<Review, 'id' | 'createdAt'>): Promise<string> {
+    if (!isSupabaseConfigured) {
+      return demoStore.createReview(data);
+    }
+
     const { data: review, error } = await supabase
       .from('reviews')
       .insert({
@@ -706,6 +826,10 @@ export class SupabaseService {
   }
 
   static async getFarmerReviews(farmerId: string): Promise<Review[]> {
+    if (!isSupabaseConfigured) {
+      return demoStore.getFarmerReviews(farmerId);
+    }
+
     const { data, error } = await supabase
       .from('reviews')
       .select('*')
@@ -730,6 +854,7 @@ export class SupabaseService {
 
   private static async updateFarmerRating(farmerId: string): Promise<void> {
     const reviews = await this.getFarmerReviews(farmerId);
+    if (reviews.length === 0) return;
     const totalRating = reviews.reduce((sum, review) => sum + review.rating, 0);
     const averageRating = totalRating / reviews.length;
 
@@ -746,11 +871,15 @@ export class SupabaseService {
 
   // File Upload (using Supabase Storage)
   static async uploadImage(uri: string, path: string): Promise<string> {
+    if (!isSupabaseConfigured) {
+      // Demo mode - use the local URI directly
+      return uri;
+    }
+
     const response = await fetch(uri);
     const blob = await response.blob();
-    
-    const fileName = path.split('/').pop() || `${Date.now()}.jpg`;
-    const { data, error } = await supabase.storage
+
+    const { error } = await supabase.storage
       .from('uploads')
       .upload(path, blob);
     

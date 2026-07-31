@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CartItem, Product } from '../types';
 
@@ -18,13 +18,17 @@ const CART_KEY = '@farmer_groceries_cart';
 
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [cart, setCart] = useState<CartItem[]>([]);
+  const hydratedRef = useRef(false);
 
   useEffect(() => {
     loadCart();
   }, []);
 
   useEffect(() => {
-    saveCart();
+    // Don't overwrite the persisted cart with [] before loadCart resolves
+    if (hydratedRef.current) {
+      saveCart();
+    }
   }, [cart]);
 
   const loadCart = async () => {
@@ -35,6 +39,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     } catch (error) {
       console.error('Error loading cart:', error);
+    } finally {
+      hydratedRef.current = true;
     }
   };
 
@@ -48,22 +54,23 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const addToCart = (product: Product, quantity: number) => {
     setCart(prevCart => {
+      const cap = (qty: number) => (product.stock > 0 ? Math.min(qty, product.stock) : qty);
       const existingItem = prevCart.find(item => item.productId === product.id);
-      
+
       if (existingItem) {
         return prevCart.map(item =>
           item.productId === product.id
-            ? { ...item, quantity: item.quantity + quantity }
+            ? { ...item, quantity: cap(item.quantity + quantity) }
             : item
         );
       }
-      
+
       return [
         ...prevCart,
         {
           productId: product.id,
           product,
-          quantity,
+          quantity: cap(quantity),
           farmerId: product.farmerId,
         },
       ];

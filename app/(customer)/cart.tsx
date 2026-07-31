@@ -32,7 +32,7 @@ export default function CartScreen() {
     if (cartTotal < MIN_ORDER_VALUE) {
       Alert.alert(
         'Minimum Order',
-        `Add items worth at least ₹${MIN_ORDER_VALUE} to checkout. You need ₹${MIN_ORDER_VALUE - cartTotal} more.`
+        `Add items worth at least ${formatCurrency(MIN_ORDER_VALUE)} to checkout. You need ${formatCurrency(MIN_ORDER_VALUE - cartTotal)} more.`
       );
       return;
     }
@@ -131,7 +131,7 @@ export default function CartScreen() {
                   <View className="flex-row items-center">
                     <TouchableOpacity
                       onPress={() => updateQuantity(item.productId, item.quantity - 1)}
-                      className="w-8 h-8 bg-gray-100 rounded-lg items-center justify-center"
+                      className="w-10 h-10 bg-gray-100 rounded-lg items-center justify-center"
                     >
                       <Text className="text-gray-700 font-bold">-</Text>
                     </TouchableOpacity>
@@ -140,7 +140,7 @@ export default function CartScreen() {
                     </Text>
                     <TouchableOpacity
                       onPress={() => updateQuantity(item.productId, item.quantity + 1)}
-                      className="w-8 h-8 bg-primary-600 rounded-lg items-center justify-center"
+                      className="w-10 h-10 bg-primary-600 rounded-lg items-center justify-center"
                     >
                       <Text className="text-white font-bold">+</Text>
                     </TouchableOpacity>
@@ -151,7 +151,7 @@ export default function CartScreen() {
               {/* Remove Button */}
               <TouchableOpacity
                 onPress={() => removeFromCart(item.productId)}
-                className="ml-2"
+                className="ml-2 p-2"
               >
                 <Text className="text-red-500">🗑️</Text>
               </TouchableOpacity>
