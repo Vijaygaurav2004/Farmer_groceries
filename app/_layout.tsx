@@ -1,9 +1,38 @@
 import { Slot, useRouter, useSegments } from 'expo-router';
 import { useEffect } from 'react';
-import { View, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator, Platform } from 'react-native';
+import '../src/utils/webAlert'; // makes Alert.alert work in the browser (must load first)
 import { AuthProvider, useAuth } from '../src/contexts/AuthContext';
 import { CartProvider } from '../src/contexts/CartContext';
+import { ToastProvider } from '../src/components/ui';
 import '../global.css';
+
+// On the web, phones fill the screen but desktops would stretch the mobile UI
+// across the whole window. Constrain the app to a phone-sized column centered
+// on a neutral backdrop; on real devices (narrower than the max) it fills edge
+// to edge as normal.
+const PHONE_MAX_WIDTH = 430;
+
+function ResponsiveShell({ children }: { children: React.ReactNode }) {
+  if (Platform.OS !== 'web') {
+    return <View style={{ flex: 1 }}>{children}</View>;
+  }
+  return (
+    <View style={{ flex: 1, backgroundColor: '#e5e7eb', alignItems: 'center' }}>
+      <View
+        style={{
+          flex: 1,
+          width: '100%',
+          maxWidth: PHONE_MAX_WIDTH,
+          backgroundColor: '#ffffff',
+          overflow: 'hidden',
+        }}
+      >
+        {children}
+      </View>
+    </View>
+  );
+}
 
 function RootLayoutNav() {
   const { user, loading, role } = useAuth();
@@ -67,20 +96,28 @@ function RootLayoutNav() {
 
   if (loading) {
     return (
-      <View className="flex-1 items-center justify-center bg-white">
-        <ActivityIndicator size="large" color="#22c55e" />
-      </View>
+      <ResponsiveShell>
+        <View className="flex-1 items-center justify-center bg-white">
+          <ActivityIndicator size="large" color="#22c55e" />
+        </View>
+      </ResponsiveShell>
     );
   }
 
-  return <Slot />;
+  return (
+    <ResponsiveShell>
+      <Slot />
+    </ResponsiveShell>
+  );
 }
 
 export default function RootLayout() {
   return (
     <AuthProvider>
       <CartProvider>
-        <RootLayoutNav />
+        <ToastProvider>
+          <RootLayoutNav />
+        </ToastProvider>
       </CartProvider>
     </AuthProvider>
   );
