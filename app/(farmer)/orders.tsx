@@ -1,274 +1,111 @@
 import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  RefreshControl,
-  ActivityIndicator,
-  Alert,
-} from 'react-native';
-import { MotiView } from 'moti';
+import { View, Text, ScrollView, RefreshControl, ActivityIndicator, Alert } from 'react-native';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { SupabaseService } from '../../src/services/supabase';
 import { Order, OrderStatus } from '../../src/types';
+import { ORDER_STATUS } from '../../src/constants';
 import { formatCurrency } from '../../src/utils/helpers';
+import { Chip, StatusPill, Button, EmptyState, useToast, FadeInUp, Divider } from '../../src/components/ui';
+import { palette, radii, shadows } from '../../src/theme';
 
-interface OrderStatusConfigEntry {
-  label: string;
-  color: string;
-  icon: string;
-  nextStatus: OrderStatus | null;
-}
-
-const orderStatusConfig: Partial<Record<OrderStatus, OrderStatusConfigEntry>> = {
-  placed: { label: 'New Order', color: 'bg-blue-500', icon: '📝', nextStatus: 'confirmed' },
-  confirmed: { label: 'Confirmed', color: 'bg-indigo-500', icon: '✅', nextStatus: 'packed' },
-  packed: { label: 'Packed', color: 'bg-purple-500', icon: '📦', nextStatus: null },
-  assigned: { label: 'Assigned', color: 'bg-orange-500', icon: '🚚', nextStatus: null },
-  picked_up: { label: 'Picked Up', color: 'bg-yellow-500', icon: '📍', nextStatus: null },
-  out_for_delivery: { label: 'Out for Delivery', color: 'bg-amber-500', icon: '🚛', nextStatus: null },
-  delivered: { label: 'Delivered', color: 'bg-green-500', icon: '✓', nextStatus: null },
-  cancelled: { label: 'Cancelled', color: 'bg-red-500', icon: '✗', nextStatus: null },
+const nextStatusMap: Partial<Record<OrderStatus, OrderStatus>> = {
+  placed: 'confirmed', confirmed: 'packed',
 };
-
-// No more hardcoded demo data - all orders from database
 
 export default function FarmerOrdersScreen() {
   const { user } = useAuth();
+  const toast = useToast();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState<'all' | 'active' | 'completed'>('active');
 
-  useEffect(() => {
-    loadOrders();
-  }, []);
+  useEffect(() => { loadOrders(); }, []);
 
   const loadOrders = async () => {
     if (!user) return;
-    
-    try {
-      setLoading(true);
-      const ordersData = await SupabaseService.getFarmerOrders(user.id);
-      setOrders(ordersData);
-    } catch (error) {
-      console.error('Error loading orders:', error);
-      setOrders([]); // Set empty array if error
-    } finally {
-      setLoading(false);
-    }
+    try { setLoading(true); setOrders(await SupabaseService.getFarmerOrders(user.id)); }
+    catch { setOrders([]); }
+    finally { setLoading(false); }
   };
+  const handleRefresh = async () => { setRefreshing(true); await loadOrders(); setRefreshing(false); };
 
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    await loadOrders();
-    setRefreshing(false);
-  };
-
-  const handleUpdateStatus = async (orderId: string, currentStatus: OrderStatus) => {
-    const config = orderStatusConfig[currentStatus];
-    const nextStatus = config?.nextStatus;
+  const handleUpdateStatus = (orderId: string, currentStatus: OrderStatus) => {
+    const nextStatus = nextStatusMap[currentStatus];
     if (!nextStatus) return;
-
-    const nextStatusLabel = orderStatusConfig[nextStatus]?.label ?? nextStatus;
-
-    Alert.alert(
-      'Update Order Status',
-      `Update order to ${nextStatusLabel}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Update',
-          onPress: async () => {
-            try {
-              await SupabaseService.updateOrderStatus(orderId, nextStatus);
-              loadOrders();
-              Alert.alert('Success', 'Order status updated');
-            } catch (error) {
-              console.error('Error updating order:', error);
-              Alert.alert('Error', 'Failed to update order status');
-            }
-          },
-        },
-      ]
-    );
+    Alert.alert('Update Order', `Mark this order as ${ORDER_STATUS[nextStatus]?.label}?`, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Update', onPress: async () => {
+        try { await SupabaseService.updateOrderStatus(orderId, nextStatus); loadOrders(); toast.show('Order updated ✓', 'success'); }
+        catch { toast.show('Failed to update order', 'error'); }
+      } },
+    ]);
   };
 
-  const filteredOrders = orders.filter(order => {
-    if (filter === 'active') {
-      return ['placed', 'confirmed', 'packed'].includes(order.orderStatus);
-    } else if (filter === 'completed') {
-      return ['delivered', 'cancelled'].includes(order.orderStatus);
-    }
+  const filteredOrders = orders.filter((o) => {
+    if (filter === 'active') return ['placed', 'confirmed', 'packed'].includes(o.orderStatus);
+    if (filter === 'completed') return ['delivered', 'cancelled'].includes(o.orderStatus);
     return true;
   });
 
-  const formatDate = (date: Date) => {
-    return new Date(date).toLocaleDateString('en-IN', {
-      day: 'numeric',
-      month: 'short',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
+  const fmt = (date: Date) => new Date(date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 
   return (
-    <View className="flex-1 bg-white">
-      {/* Header */}
-      <View className="px-6 pt-14 pb-4 border-b border-gray-200">
-        <Text className="text-2xl font-bold text-gray-900 mb-4">Orders</Text>
-        
-        {/* Filter Tabs */}
-        <View className="flex-row">
-          <TouchableOpacity
-            onPress={() => setFilter('active')}
-            className={`mr-3 px-4 py-2 rounded-full ${
-              filter === 'active' ? 'bg-primary-600' : 'bg-gray-100'
-            }`}
-          >
-            <Text
-              className={`text-sm font-semibold ${
-                filter === 'active' ? 'text-white' : 'text-gray-700'
-              }`}
-            >
-              Active
-            </Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity
-            onPress={() => setFilter('all')}
-            className={`mr-3 px-4 py-2 rounded-full ${
-              filter === 'all' ? 'bg-primary-600' : 'bg-gray-100'
-            }`}
-          >
-            <Text
-              className={`text-sm font-semibold ${
-                filter === 'all' ? 'text-white' : 'text-gray-700'
-              }`}
-            >
-              All
-            </Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity
-            onPress={() => setFilter('completed')}
-            className={`px-4 py-2 rounded-full ${
-              filter === 'completed' ? 'bg-primary-600' : 'bg-gray-100'
-            }`}
-          >
-            <Text
-              className={`text-sm font-semibold ${
-                filter === 'completed' ? 'text-white' : 'text-gray-700'
-              }`}
-            >
-              Completed
-            </Text>
-          </TouchableOpacity>
-        </View>
+    <View style={{ flex: 1, backgroundColor: palette.slate50 }}>
+      <View style={{ paddingTop: 56, paddingBottom: 12 }}>
+        <Text style={{ fontSize: 26, fontWeight: '900', color: palette.ink, paddingHorizontal: 20, marginBottom: 14 }}>Orders</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 18 }}>
+          {(['active', 'all', 'completed'] as const).map((f) => (
+            <Chip key={f} label={f.charAt(0).toUpperCase() + f.slice(1)} active={filter === f} onPress={() => setFilter(f)} />
+          ))}
+        </ScrollView>
       </View>
 
       {loading ? (
-        <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color="#22c55e" />
-        </View>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}><ActivityIndicator size="large" color={palette.green600} /></View>
       ) : filteredOrders.length === 0 ? (
-        <View className="flex-1 items-center justify-center">
-          <Text className="text-6xl mb-4">📦</Text>
-          <Text className="text-xl font-semibold text-gray-900 mb-2">
-            No {filter !== 'all' ? filter : ''} orders
-          </Text>
-          <Text className="text-gray-600">Orders will appear here</Text>
-        </View>
+        <EmptyState icon="📦" title={`No ${filter !== 'all' ? filter : ''} orders`} subtitle="New orders will appear here" />
       ) : (
-        <ScrollView
-          className="flex-1"
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
-          }
-        >
-          <View className="px-6 py-4">
-            {filteredOrders.map((order, index) => {
-              const statusConfig = orderStatusConfig[order.orderStatus] ?? {
-                label: order.orderStatus,
-                color: 'bg-gray-400',
-                icon: '❔',
-                nextStatus: null,
-              };
-
-              return (
-                <MotiView
-                  key={order.id}
-                  from={{ opacity: 0, translateY: 20 }}
-                  animate={{ opacity: 1, translateY: 0 }}
-                  transition={{ type: 'timing', duration: 300, delay: index * 50 }}
-                  className="bg-white border border-gray-200 rounded-xl p-4 mb-3"
-                >
-                  {/* Order Header */}
-                  <View className="flex-row justify-between items-start mb-3">
-                    <View className="flex-1">
-                      <Text className="text-base font-bold text-gray-900 mb-1">
-                        {order.orderNumber}
-                      </Text>
-                      <Text className="text-sm text-gray-600 mb-1">
-                        Customer: {order.customerName}
-                      </Text>
-                      <Text className="text-xs text-gray-500">
-                        {formatDate(order.createdAt)}
-                      </Text>
-                    </View>
-                    <View
-                      className={`${statusConfig.color} px-3 py-1 rounded-full flex-row items-center`}
-                    >
-                      <Text className="mr-1">{statusConfig.icon}</Text>
-                      <Text className="text-white text-xs font-semibold">
-                        {statusConfig.label}
-                      </Text>
-                    </View>
+        <ScrollView showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={palette.green600} />} contentContainerStyle={{ padding: 18, paddingBottom: 24 }}>
+          {filteredOrders.map((order) => {
+            const nextStatus = nextStatusMap[order.orderStatus];
+            return (
+              <FadeInUp key={order.id} style={[{ backgroundColor: palette.white, borderRadius: radii.lg, padding: 16, marginBottom: 14 }, shadows.sm] as any}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 15, fontWeight: '900', color: palette.ink }}>#{order.orderNumber}</Text>
+                    <Text style={{ fontSize: 13, color: palette.slate500, marginTop: 3 }}>👤 {order.customerName}</Text>
+                    <Text style={{ fontSize: 12, color: palette.slate400, marginTop: 2 }}>{fmt(order.createdAt)}</Text>
                   </View>
+                  <StatusPill status={order.orderStatus as any} size="sm" />
+                </View>
 
-                  {/* Items */}
-                  <View className="bg-gray-50 rounded-lg p-3 mb-3">
-                    {order.items.map((item, idx) => (
-                      <View key={idx} className="flex-row justify-between mb-1">
-                        <Text className="text-sm text-gray-700 flex-1">
-                          {item.productName} x {item.quantity}
-                        </Text>
-                        <Text className="text-sm font-semibold text-gray-900">
-                          {formatCurrency(item.total)}
-                        </Text>
-                      </View>
-                    ))}
-                  </View>
-
-                  {/* Footer */}
-                  <View className="flex-row justify-between items-center">
-                    <View>
-                      <Text className="text-sm text-gray-600">Total Amount</Text>
-                      <Text className="text-lg font-bold text-primary-600">
-                        {formatCurrency(order.total)}
-                      </Text>
+                <View style={{ backgroundColor: palette.slate50, borderRadius: radii.md, padding: 12, marginTop: 12 }}>
+                  {order.items.map((item, idx) => (
+                    <View key={idx} style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: idx < order.items.length - 1 ? 6 : 0 }}>
+                      <Text style={{ fontSize: 13, color: palette.slate600, flex: 1 }}>{item.productName} × {item.quantity}</Text>
+                      <Text style={{ fontSize: 13, fontWeight: '700', color: palette.ink }}>{formatCurrency(item.total)}</Text>
                     </View>
+                  ))}
+                </View>
 
-                    {statusConfig.nextStatus && (
-                      <TouchableOpacity
-                        onPress={() => handleUpdateStatus(order.id, order.orderStatus)}
-                        className="bg-primary-600 px-4 py-2 rounded-lg"
-                      >
-                        <Text className="text-white font-semibold">
-                          Mark {orderStatusConfig[statusConfig.nextStatus]?.label ?? statusConfig.nextStatus}
-                        </Text>
-                      </TouchableOpacity>
-                    )}
+                <Divider style={{ marginVertical: 12 }} />
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <View>
+                    <Text style={{ fontSize: 11.5, color: palette.slate400 }}>Total</Text>
+                    <Text style={{ fontSize: 18, fontWeight: '900', color: palette.green700 }}>{formatCurrency(order.total)}</Text>
                   </View>
-                </MotiView>
-              );
-            })}
-          </View>
+                  {nextStatus ? (
+                    <View style={{ minWidth: 150 }}>
+                      <Button label={`Mark ${ORDER_STATUS[nextStatus]?.label}`} size="sm" icon="arrow-forward-circle" onPress={() => handleUpdateStatus(order.id, order.orderStatus)} />
+                    </View>
+                  ) : null}
+                </View>
+              </FadeInUp>
+            );
+          })}
         </ScrollView>
       )}
     </View>
   );
 }
-

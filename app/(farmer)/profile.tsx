@@ -1,156 +1,79 @@
 import React from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  Alert,
-} from 'react-native';
+import { View, Text, ScrollView, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
-import { MotiView } from 'moti';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { APP_CONFIG } from '../../src/constants';
+import { PressableScale, useToast, FadeInUp, Divider } from '../../src/components/ui';
+import { palette, radii, shadows, gradients } from '../../src/theme';
+
+type IoniconName = keyof typeof Ionicons.glyphMap;
 
 export default function FarmerProfileScreen() {
   const { user, signOut } = useAuth();
   const router = useRouter();
+  const toast = useToast();
 
   const handleSignOut = () => {
-    Alert.alert(
-      'Sign Out',
-      'Are you sure you want to sign out?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Sign Out',
-          style: 'destructive',
-          onPress: async () => {
-            await signOut();
-            router.replace('/(auth)/login');
-          },
-        },
-      ]
-    );
+    Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Sign Out', style: 'destructive', onPress: async () => { await signOut(); router.replace('/(auth)/login'); } },
+    ]);
   };
 
-  const menuItems = [
-    { 
-      icon: '🌾', 
-      label: 'Farm Details', 
-      action: () => Alert.alert('Farm Details', 'Update your farm name, location, and description'),
-      description: 'Manage your farm information'
-    },
-    { 
-      icon: '📄', 
-      label: 'Verification Documents', 
-      action: () => Alert.alert('Verification', 'Upload farm certification and identity documents'),
-      description: 'Upload verification documents'
-    },
-    { 
-      icon: '💰', 
-      label: 'Earnings & Payouts', 
-      action: () => Alert.alert('Earnings', 'View your total earnings and payout history'),
-      description: 'Track your income'
-    },
-    { 
-      icon: '⭐', 
-      label: 'Reviews & Ratings', 
-      action: () => Alert.alert('Reviews', 'See what customers are saying about your products'),
-      description: 'Customer feedback'
-    },
-    { 
-      icon: '🔔', 
-      label: 'Notifications', 
-      action: () => Alert.alert('Notifications', 'Manage your notification preferences'),
-      description: 'Notification settings'
-    },
-    { 
-      icon: '❓', 
-      label: 'Help & Support', 
-      action: () => Alert.alert('Support', 'Contact us at farmer-support@farmergroceries.com'),
-      description: 'Get help with your account'
-    },
-    { 
-      icon: '📋', 
-      label: 'Terms & Conditions', 
-      action: () => Alert.alert('Terms', 'View farmer terms and conditions'),
-      description: 'Read our terms'
-    },
+  const items: { icon: IoniconName; label: string; color: string }[] = [
+    { icon: 'leaf-outline', label: 'Farm Details', color: palette.green600 },
+    { icon: 'document-attach-outline', label: 'Verification Documents', color: palette.sky },
+    { icon: 'wallet-outline', label: 'Earnings & Payouts', color: palette.amber600 },
+    { icon: 'star-outline', label: 'Reviews & Ratings', color: palette.violet },
+    { icon: 'notifications-outline', label: 'Notifications', color: palette.coral },
+    { icon: 'help-circle-outline', label: 'Help & Support', color: palette.slate500 },
   ];
 
   return (
-    <View className="flex-1 bg-white">
-      {/* Header */}
-      <View className="px-6 pt-14 pb-6 bg-primary-600">
-        <View className="items-center">
-          <View className="w-24 h-24 bg-white rounded-full items-center justify-center mb-3">
-            <Text className="text-5xl">👨‍🌾</Text>
+    <View style={{ flex: 1, backgroundColor: palette.slate50 }}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
+        <LinearGradient colors={gradients.brand as any} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ paddingTop: 60, paddingBottom: 28, alignItems: 'center', borderBottomLeftRadius: 30, borderBottomRightRadius: 30 }}>
+          <View style={[{ width: 92, height: 92, borderRadius: 46, backgroundColor: palette.white, alignItems: 'center', justifyContent: 'center', marginBottom: 12 }, shadows.md]}>
+            <Text style={{ fontSize: 46 }}>🧑‍🌾</Text>
           </View>
-          <Text className="text-white text-2xl font-bold mb-1">
-            {user?.name || 'Farmer'}
-          </Text>
-          {user?.phoneNumber && (
-            <Text className="text-primary-100">{user.phoneNumber}</Text>
-          )}
-        </View>
-      </View>
+          <Text style={{ fontSize: 22, fontWeight: '900', color: palette.white }}>{user?.name || 'Farmer'}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6, backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 12, paddingVertical: 5, borderRadius: radii.pill }}>
+            <Ionicons name="shield-checkmark" size={14} color={palette.white} />
+            <Text style={{ fontSize: 12.5, color: palette.white, marginLeft: 5, fontWeight: '700' }}>Verified Farmer</Text>
+          </View>
+        </LinearGradient>
 
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-        <View className="px-6 py-6">
-          {/* Menu Items */}
-          {menuItems.map((item, index) => (
-            <MotiView
-              key={item.label}
-              from={{ opacity: 0, translateX: -20 }}
-              animate={{ opacity: 1, translateX: 0 }}
-              transition={{ type: 'timing', duration: 300, delay: index * 50 }}
-            >
-              <TouchableOpacity
-                onPress={item.action}
-                className="py-4 border-b border-gray-100"
-              >
-                <View className="flex-row items-center">
-                  <View className="w-10 h-10 bg-gray-100 rounded-full items-center justify-center mr-4">
-                    <Text className="text-xl">{item.icon}</Text>
+        <View style={{ paddingHorizontal: 18, marginTop: 20 }}>
+          <View style={[{ backgroundColor: palette.white, borderRadius: radii.lg, overflow: 'hidden' }, shadows.sm]}>
+            {items.map((item, idx) => (
+              <View key={item.label}>
+                <PressableScale onPress={() => toast.show(`${item.label} — coming soon`, 'info')} scaleTo={0.99} haptic={false}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 15 }}>
+                    <View style={{ width: 38, height: 38, borderRadius: 12, backgroundColor: item.color + '18', alignItems: 'center', justifyContent: 'center' }}>
+                      <Ionicons name={item.icon} size={19} color={item.color} />
+                    </View>
+                    <Text style={{ flex: 1, fontSize: 15, fontWeight: '700', color: palette.ink, marginLeft: 14 }}>{item.label}</Text>
+                    <Ionicons name="chevron-forward" size={18} color={palette.slate300} />
                   </View>
-                  <View className="flex-1">
-                    <Text className="text-base font-semibold text-gray-900 mb-1">
-                      {item.label}
-                    </Text>
-                    <Text className="text-xs text-gray-500">
-                      {item.description}
-                    </Text>
-                  </View>
-                  <Text className="text-gray-400 text-xl">›</Text>
-                </View>
-              </TouchableOpacity>
-            </MotiView>
-          ))}
+                </PressableScale>
+                {idx < items.length - 1 ? <Divider style={{ marginLeft: 68 }} /> : null}
+              </View>
+            ))}
+          </View>
 
-          {/* Sign Out */}
-          <MotiView
-            from={{ opacity: 0, translateY: 20 }}
-            animate={{ opacity: 1, translateY: 0 }}
-            transition={{ type: 'timing', duration: 300, delay: 400 }}
-            className="mt-6"
-          >
-            <TouchableOpacity
-              onPress={handleSignOut}
-              className="bg-red-50 border border-red-200 rounded-xl py-4 items-center"
-            >
-              <Text className="text-red-600 font-semibold text-base">
-                Sign Out
-              </Text>
-            </TouchableOpacity>
-          </MotiView>
-
-          {/* Version */}
-          <Text className="text-center text-gray-400 text-sm mt-6">
-            {APP_CONFIG.name} v{APP_CONFIG.version}
-          </Text>
+          <View style={{ marginTop: 22 }}>
+            <PressableScale onPress={handleSignOut}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#fef2f2', borderRadius: radii.pill, paddingVertical: 16 }}>
+                <Ionicons name="log-out-outline" size={20} color={palette.coral} />
+                <Text style={{ fontSize: 15.5, fontWeight: '800', color: palette.coral, marginLeft: 8 }}>Sign Out</Text>
+              </View>
+            </PressableScale>
+            <Text style={{ textAlign: 'center', fontSize: 12, color: palette.slate400, marginTop: 18 }}>{APP_CONFIG.name} · v{APP_CONFIG.version}</Text>
+          </View>
         </View>
       </ScrollView>
     </View>
   );
 }
-
