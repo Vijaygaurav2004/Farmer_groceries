@@ -1,47 +1,26 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  ScrollView,
-  Alert,
-  ActivityIndicator,
-} from 'react-native';
+import { View, Text, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
-import { MotiView } from 'moti';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../src/contexts/AuthContext';
 import { UserRole } from '../src/types';
+import { Button, PressableScale, useToast, FadeInUp } from '../src/components/ui';
+import { palette, radii, shadows } from '../src/theme';
 
 interface RoleOption {
   role: UserRole;
-  icon: string;
+  emoji: string;
   title: string;
   description: string;
-  color: string;
+  tint: string;
+  ink: string;
 }
 
 const roleOptions: RoleOption[] = [
-  {
-    role: 'customer',
-    icon: '🛒',
-    title: 'Customer',
-    description: 'Buy fresh produce directly from farmers',
-    color: 'bg-blue-100',
-  },
-  {
-    role: 'farmer',
-    icon: '🌾',
-    title: 'Farmer',
-    description: 'Sell your fresh produce directly to customers',
-    color: 'bg-green-100',
-  },
-  {
-    role: 'delivery',
-    icon: '🚚',
-    title: 'Delivery Partner',
-    description: 'Deliver orders and earn money',
-    color: 'bg-orange-100',
-  },
+  { role: 'customer', emoji: '🛒', title: 'Customer', description: 'Buy fresh produce directly from farmers', tint: '#e0f2fe', ink: '#0369a1' },
+  { role: 'farmer', emoji: '🌾', title: 'Farmer', description: 'Sell your produce directly to customers', tint: '#dcfce7', ink: '#15803d' },
+  { role: 'delivery', emoji: '🚚', title: 'Delivery Partner', description: 'Deliver orders and earn on your schedule', tint: '#ffedd5', ink: '#c2410c' },
 ];
 
 export default function RoleSelectScreen() {
@@ -49,138 +28,72 @@ export default function RoleSelectScreen() {
   const [loading, setLoading] = useState(false);
   const { setRole } = useAuth();
   const router = useRouter();
+  const toast = useToast();
 
   const handleContinue = async () => {
-    if (!selectedRole) {
-      Alert.alert('Select Role', 'Please select a role to continue');
-      return;
-    }
-
+    if (!selectedRole) return toast.show('Please select a role to continue', 'error');
     setLoading(true);
     try {
-      console.log('Setting role:', selectedRole);
       await setRole(selectedRole);
-      console.log('Role set successfully, navigating to dashboard...');
-
-      // Navigate based on role
-      if (selectedRole === 'customer') {
-        console.log('Navigating to customer home');
-        router.replace('/(customer)/home');
-      } else if (selectedRole === 'farmer') {
-        console.log('Navigating to farmer dashboard');
-        router.replace('/(farmer)/dashboard');
-      } else if (selectedRole === 'delivery') {
-        console.log('Navigating to delivery orders');
-        router.replace('/(delivery)/orders');
-      }
+      if (selectedRole === 'customer') router.replace('/(customer)/home');
+      else if (selectedRole === 'farmer') router.replace('/(farmer)/dashboard');
+      else if (selectedRole === 'delivery') router.replace('/(delivery)/orders');
     } catch (error: any) {
-      console.error('Role selection error:', error);
-      Alert.alert('Error', error.message || 'Failed to set role');
+      toast.show(error.message || 'Failed to set role', 'error');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <ScrollView className="flex-1 bg-white">
-      <View className="px-6 pt-16 pb-8">
-        {/* Header */}
-        <MotiView
-          from={{ opacity: 0, translateY: -20 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: 'timing', duration: 600 }}
-          className="mb-8"
-        >
-          <View className="w-20 h-20 bg-primary-100 rounded-full items-center justify-center mb-4">
-            <Text className="text-4xl">🌾</Text>
-          </View>
-          <Text className="text-3xl font-bold text-gray-900 mb-2">
-            Choose Your Role
-          </Text>
-          <Text className="text-base text-gray-600">
-            Select how you want to use Farmer Groceries
-          </Text>
-        </MotiView>
+    <View style={{ flex: 1, backgroundColor: palette.slate50 }}>
+      <LinearGradient colors={['#16a34a', '#22c55e'] as any} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ paddingTop: 64, paddingBottom: 34, paddingHorizontal: 24, borderBottomLeftRadius: 30, borderBottomRightRadius: 30 }}>
+        <FadeInUp distance={-14}>
+          <Text style={{ fontSize: 15, color: 'rgba(255,255,255,0.85)', fontWeight: '600' }}>One last step</Text>
+          <Text style={{ fontSize: 30, fontWeight: '900', color: palette.white, letterSpacing: -0.6, marginTop: 4 }}>Choose your role</Text>
+          <Text style={{ fontSize: 14.5, color: 'rgba(255,255,255,0.9)', marginTop: 6 }}>Pick how you'll use Farmer Groceries</Text>
+        </FadeInUp>
+      </LinearGradient>
 
-        {/* Role Options */}
-        <View className="gap-4">
-          {roleOptions.map((option, index) => (
-            <MotiView
-              key={option.role}
-              from={{ opacity: 0, translateX: -20 }}
-              animate={{ opacity: 1, translateX: 0 }}
-              transition={{ type: 'timing', duration: 600, delay: index * 100 }}
-            >
-              <TouchableOpacity
-                onPress={() => setSelectedRole(option.role)}
-                className={`border-2 rounded-2xl p-4 mb-4 ${
-                  selectedRole === option.role
-                    ? 'border-primary-600 bg-primary-50'
-                    : 'border-gray-200 bg-white'
-                }`}
-              >
-                <View className="flex-row items-center">
-                  <View
-                    className={`w-16 h-16 ${option.color} rounded-xl items-center justify-center mr-4`}
-                  >
-                    <Text className="text-3xl">{option.icon}</Text>
+      <ScrollView contentContainerStyle={{ padding: 18, paddingTop: 22 }} showsVerticalScrollIndicator={false}>
+        {roleOptions.map((option, i) => {
+          const active = selectedRole === option.role;
+          return (
+            <FadeInUp key={option.role} delay={80 + i * 90}>
+              <PressableScale onPress={() => setSelectedRole(option.role)} scaleTo={0.98} style={{ marginBottom: 14 }}>
+                <View
+                  style={[
+                    {
+                      flexDirection: 'row', alignItems: 'center', padding: 16, borderRadius: radii.lg,
+                      backgroundColor: palette.white, borderWidth: 2,
+                      borderColor: active ? palette.green500 : 'transparent',
+                    },
+                    active ? shadows.md : shadows.sm,
+                  ]}
+                >
+                  <View style={{ width: 60, height: 60, borderRadius: 18, backgroundColor: option.tint, alignItems: 'center', justifyContent: 'center', marginRight: 14 }}>
+                    <Text style={{ fontSize: 30 }}>{option.emoji}</Text>
                   </View>
-                  <View className="flex-1">
-                    <Text className="text-lg font-semibold text-gray-900 mb-1">
-                      {option.title}
-                    </Text>
-                    <Text className="text-sm text-gray-600">
-                      {option.description}
-                    </Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 17, fontWeight: '800', color: palette.ink }}>{option.title}</Text>
+                    <Text style={{ fontSize: 13, color: palette.slate500, marginTop: 3, lineHeight: 18 }}>{option.description}</Text>
                   </View>
-                  {selectedRole === option.role && (
-                    <View className="w-6 h-6 bg-primary-600 rounded-full items-center justify-center">
-                      <Text className="text-white text-xs">✓</Text>
-                    </View>
-                  )}
+                  <View style={{ width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center', backgroundColor: active ? palette.green600 : palette.slate100 }}>
+                    {active ? <Ionicons name="checkmark" size={16} color={palette.white} /> : null}
+                  </View>
                 </View>
-              </TouchableOpacity>
-            </MotiView>
-          ))}
-        </View>
+              </PressableScale>
+            </FadeInUp>
+          );
+        })}
 
-        {/* Continue Button */}
-        <MotiView
-          from={{ opacity: 0, translateY: 20 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: 'timing', duration: 600, delay: 400 }}
-          className="mt-8"
-        >
-          <TouchableOpacity
-            onPress={handleContinue}
-            disabled={loading || !selectedRole}
-            className={`bg-primary-600 rounded-xl py-4 items-center ${
-              !selectedRole || loading ? 'opacity-50' : ''
-            }`}
-          >
-            {loading ? (
-              <ActivityIndicator color="white" />
-            ) : (
-              <Text className="text-white text-base font-semibold">
-                Continue
-              </Text>
-            )}
-          </TouchableOpacity>
-        </MotiView>
-
-        {/* Note */}
-        <MotiView
-          from={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ type: 'timing', duration: 600, delay: 500 }}
-          className="mt-6"
-        >
-          <Text className="text-center text-sm text-gray-500">
-            You can change your role later in settings
+        <FadeInUp delay={380} style={{ marginTop: 12 } as any}>
+          <Button label="Continue" iconRight="arrow-forward" loading={loading} onPress={handleContinue} size="lg" />
+          <Text style={{ textAlign: 'center', fontSize: 12.5, color: palette.slate400, marginTop: 16 }}>
+            You can create another account for a different role anytime
           </Text>
-        </MotiView>
-      </View>
-    </ScrollView>
+        </FadeInUp>
+      </ScrollView>
+    </View>
   );
 }
-
