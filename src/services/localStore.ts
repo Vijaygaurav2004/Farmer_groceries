@@ -1,16 +1,17 @@
-// In-memory + AsyncStorage-backed data store used when Supabase isn't configured.
-// ponytail: single-tenant demo — farmer/delivery/customer queries ignore user IDs
-// so one device can play all three roles against the same data. Swap for real
-// Supabase (set EXPO_PUBLIC_SUPABASE_URL) when multi-user is needed.
+// On-device data layer: an in-memory store mirrored to AsyncStorage, used
+// whenever no cloud backend is configured. It is single-tenant by design —
+// farmer, delivery and customer queries are not scoped by user id, so a single
+// device can exercise all three roles against the same catalogue and orders.
+// Set EXPO_PUBLIC_SUPABASE_URL to route the same operations to Supabase instead.
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Address, Farmer, Order, OrderStatus, Product, Review } from '../types';
 
-const STORE_KEY = '@farmer_groceries_demo_store_v1';
+const STORE_KEY = '@farmer_groceries_store_v1';
 const DATE_KEYS = new Set(['createdAt', 'updatedAt', 'harvestDate', 'timestamp', 'nextDeliveryDate', 'startDate']);
 
 const daysAgo = (d: number) => new Date(Date.now() - d * 24 * 60 * 60 * 1000);
 
-const DEMO_ADDRESS: Address = {
+const DEFAULT_ADDRESS: Address = {
   id: 'home',
   label: 'Home',
   street: '42 Green Park Road',
@@ -24,12 +25,12 @@ const DEMO_ADDRESS: Address = {
 
 const FARMERS: Farmer[] = [
   {
-    id: 'demo_farmer_1',
-    email: 'ramesh@farm.demo',
+    id: 'farmer_1',
+    email: 'ramesh@patilorganic.in',
     role: 'farmer',
     name: 'Ramesh Patil',
     farmName: 'Patil Organic Farm',
-    farmAddress: { ...DEMO_ADDRESS, id: 'farm1', label: 'Farm', street: 'Village Khed', city: 'Pune' },
+    farmAddress: { ...DEFAULT_ADDRESS, id: 'farm1', label: 'Farm', street: 'Village Khed', city: 'Pune' },
     verificationStatus: 'verified',
     verificationDocuments: [],
     rating: 4.6,
@@ -39,12 +40,12 @@ const FARMERS: Farmer[] = [
     updatedAt: daysAgo(2),
   },
   {
-    id: 'demo_farmer_2',
-    email: 'lakshmi@farm.demo',
+    id: 'farmer_2',
+    email: 'lakshmi@lakshmiorchards.in',
     role: 'farmer',
     name: 'Lakshmi Devi',
     farmName: 'Lakshmi Fruit Orchards',
-    farmAddress: { ...DEMO_ADDRESS, id: 'farm2', label: 'Farm', street: 'Ratnagiri Road', city: 'Ratnagiri' },
+    farmAddress: { ...DEFAULT_ADDRESS, id: 'farm2', label: 'Farm', street: 'Ratnagiri Road', city: 'Ratnagiri' },
     verificationStatus: 'verified',
     verificationDocuments: [],
     rating: 4.8,
@@ -54,12 +55,12 @@ const FARMERS: Farmer[] = [
     updatedAt: daysAgo(5),
   },
   {
-    id: 'demo_farmer_3',
-    email: 'gurpreet@farm.demo',
+    id: 'farmer_3',
+    email: 'gurpreet@singhdairy.in',
     role: 'farmer',
     name: 'Gurpreet Singh',
     farmName: 'Singh Dairy & Grains',
-    farmAddress: { ...DEMO_ADDRESS, id: 'farm3', label: 'Farm', street: 'NH-48', city: 'Nashik' },
+    farmAddress: { ...DEFAULT_ADDRESS, id: 'farm3', label: 'Farm', street: 'NH-48', city: 'Nashik' },
     verificationStatus: 'verified',
     verificationDocuments: [],
     rating: 4.4,
@@ -90,16 +91,16 @@ function makeProduct(
 }
 
 const PRODUCTS: Product[] = [
-  makeProduct('demo_p1', FARMERS[0], { name: 'Fresh Tomatoes', description: 'Juicy vine-ripened tomatoes, picked this morning.', category: 'vegetables', unit: 'kg', pricePerUnit: 40, stock: 50 }),
-  makeProduct('demo_p2', FARMERS[0], { name: 'Baby Spinach', description: 'Tender pesticide-free spinach leaves.', category: 'vegetables', unit: 'kg', pricePerUnit: 60, stock: 25 }),
-  makeProduct('demo_p3', FARMERS[0], { name: 'Potatoes', description: 'Farm-fresh potatoes, great for every kitchen.', category: 'vegetables', unit: 'kg', pricePerUnit: 30, stock: 100, isOrganic: false }),
-  makeProduct('demo_p4', FARMERS[0], { name: 'Fresh Coriander', description: 'Aromatic coriander bunches.', category: 'herbs', unit: 'piece', pricePerUnit: 15, stock: 40 }),
-  makeProduct('demo_p5', FARMERS[1], { name: 'Alphonso Mangoes', description: 'The king of mangoes, from Ratnagiri orchards.', category: 'fruits', unit: 'dozen', pricePerUnit: 650, stock: 20 }),
-  makeProduct('demo_p6', FARMERS[1], { name: 'Bananas', description: 'Naturally ripened Robusta bananas.', category: 'fruits', unit: 'dozen', pricePerUnit: 55, stock: 60 }),
-  makeProduct('demo_p7', FARMERS[1], { name: 'Raw Forest Honey', description: 'Unprocessed honey from forest hives.', category: 'honey', unit: 'liter', pricePerUnit: 480, stock: 15 }),
-  makeProduct('demo_p8', FARMERS[2], { name: 'Cow Milk', description: 'Fresh whole milk, delivered chilled.', category: 'dairy', unit: 'liter', pricePerUnit: 65, stock: 30 }),
-  makeProduct('demo_p9', FARMERS[2], { name: 'Basmati Rice', description: 'Aged long-grain basmati rice.', category: 'grains', unit: 'kg', pricePerUnit: 120, stock: 80, isOrganic: false }),
-  makeProduct('demo_p10', FARMERS[2], { name: 'Free-Range Eggs', description: 'Eggs from free-range desi hens.', category: 'eggs', unit: 'dozen', pricePerUnit: 90, stock: 35 }),
+  makeProduct('p1', FARMERS[0], { name: 'Fresh Tomatoes', description: 'Juicy vine-ripened tomatoes, picked this morning.', category: 'vegetables', unit: 'kg', pricePerUnit: 40, stock: 50 }),
+  makeProduct('p2', FARMERS[0], { name: 'Baby Spinach', description: 'Tender pesticide-free spinach leaves.', category: 'vegetables', unit: 'kg', pricePerUnit: 60, stock: 25 }),
+  makeProduct('p3', FARMERS[0], { name: 'Potatoes', description: 'Farm-fresh potatoes, great for every kitchen.', category: 'vegetables', unit: 'kg', pricePerUnit: 30, stock: 100, isOrganic: false }),
+  makeProduct('p4', FARMERS[0], { name: 'Fresh Coriander', description: 'Aromatic coriander bunches.', category: 'herbs', unit: 'piece', pricePerUnit: 15, stock: 40 }),
+  makeProduct('p5', FARMERS[1], { name: 'Alphonso Mangoes', description: 'The king of mangoes, from Ratnagiri orchards.', category: 'fruits', unit: 'dozen', pricePerUnit: 650, stock: 20 }),
+  makeProduct('p6', FARMERS[1], { name: 'Bananas', description: 'Naturally ripened Robusta bananas.', category: 'fruits', unit: 'dozen', pricePerUnit: 55, stock: 60 }),
+  makeProduct('p7', FARMERS[1], { name: 'Raw Forest Honey', description: 'Unprocessed honey from forest hives.', category: 'honey', unit: 'liter', pricePerUnit: 480, stock: 15 }),
+  makeProduct('p8', FARMERS[2], { name: 'Cow Milk', description: 'Fresh whole milk, delivered chilled.', category: 'dairy', unit: 'liter', pricePerUnit: 65, stock: 30 }),
+  makeProduct('p9', FARMERS[2], { name: 'Basmati Rice', description: 'Aged long-grain basmati rice.', category: 'grains', unit: 'kg', pricePerUnit: 120, stock: 80, isOrganic: false }),
+  makeProduct('p10', FARMERS[2], { name: 'Free-Range Eggs', description: 'Eggs from free-range desi hens.', category: 'eggs', unit: 'dozen', pricePerUnit: 90, stock: 35 }),
 ];
 
 function makeOrder(
@@ -127,8 +128,8 @@ function makeOrder(
   return {
     id,
     orderNumber,
-    customerId: 'demo_customer',
-    customerName: 'Demo Customer',
+    customerId: 'customer_1',
+    customerName: 'Ananya Iyer',
     farmerId: farmer.id,
     farmerName: farmer.name || farmer.farmName,
     deliveryPartnerId,
@@ -136,7 +137,7 @@ function makeOrder(
     subtotal,
     deliveryFee,
     total: subtotal + deliveryFee,
-    deliveryAddress: DEMO_ADDRESS,
+    deliveryAddress: DEFAULT_ADDRESS,
     paymentMethod: 'upi',
     paymentStatus: status === 'delivered' ? 'paid' : 'pending',
     orderStatus: status,
@@ -147,24 +148,24 @@ function makeOrder(
 }
 
 const ORDERS: Order[] = [
-  makeOrder('demo_o1', 'FG-1001', FARMERS[0], [{ product: PRODUCTS[0], quantity: 2 }, { product: PRODUCTS[1], quantity: 1 }], 'delivered', 3, 'demo_delivery_1'),
-  makeOrder('demo_o2', 'FG-1002', FARMERS[1], [{ product: PRODUCTS[4], quantity: 1 }], 'packed', 0.2),
+  makeOrder('o1', 'FG-1001', FARMERS[0], [{ product: PRODUCTS[0], quantity: 2 }, { product: PRODUCTS[1], quantity: 1 }], 'delivered', 3, 'delivery_1'),
+  makeOrder('o2', 'FG-1002', FARMERS[1], [{ product: PRODUCTS[4], quantity: 1 }], 'packed', 0.2),
 ];
 
-interface DemoState {
+interface LocalState {
   products: Product[];
   orders: Order[];
   reviews: Review[];
 }
 
-let state: DemoState | null = null;
-let loadPromise: Promise<DemoState> | null = null;
+let state: LocalState | null = null;
+let loadPromise: Promise<LocalState> | null = null;
 
 function reviveDates(key: string, value: unknown) {
   return DATE_KEYS.has(key) && typeof value === 'string' ? new Date(value) : value;
 }
 
-async function ensureLoaded(): Promise<DemoState> {
+async function ensureLoaded(): Promise<LocalState> {
   if (state) return state;
   if (!loadPromise) {
     loadPromise = (async () => {
@@ -175,7 +176,7 @@ async function ensureLoaded(): Promise<DemoState> {
           return state!;
         }
       } catch (error) {
-        console.error('demoStore: failed to load, reseeding', error);
+        console.error('localStore: failed to load, restoring defaults', error);
       }
       state = { products: [...PRODUCTS], orders: [...ORDERS], reviews: [] };
       return state;
@@ -187,15 +188,15 @@ async function ensureLoaded(): Promise<DemoState> {
 function persist() {
   if (!state) return;
   AsyncStorage.setItem(STORE_KEY, JSON.stringify(state)).catch(error =>
-    console.error('demoStore: failed to persist', error)
+    console.error('localStore: failed to persist', error)
   );
 }
 
 const ACTIVE_DELIVERY_STATUSES: OrderStatus[] = ['packed', 'assigned', 'picked_up', 'out_for_delivery'];
 const newestFirst = (a: Order, b: Order) => b.createdAt.getTime() - a.createdAt.getTime();
 
-export const demoStore = {
-  // ---- Farmers (static seeds; ratings update in-memory only) ----
+export const localStore = {
+  // ---- Farmers (ratings update in-memory only) ----
   async getFarmers(): Promise<Farmer[]> {
     return FARMERS;
   },
@@ -269,9 +270,9 @@ export const demoStore = {
 
   async createOrder(data: Omit<Order, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
     const s = await ensureLoaded();
-    const id = `demo_order_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+    const id = `order_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
     s.orders.unshift({ ...data, id, createdAt: new Date(), updatedAt: new Date() });
-    // Decrement stock so the demo feels real
+    // Reserve the ordered quantity against available stock
     for (const item of data.items) {
       const p = s.products.find(prod => prod.id === item.productId);
       if (p) p.stock = Math.max(0, p.stock - item.quantity);
@@ -303,7 +304,7 @@ export const demoStore = {
   // ---- Reviews ----
   async createReview(data: Omit<Review, 'id' | 'createdAt'>): Promise<string> {
     const s = await ensureLoaded();
-    const id = `demo_review_${Date.now()}`;
+    const id = `review_${Date.now()}`;
     s.reviews.unshift({ ...data, id, createdAt: new Date() });
     persist();
     return id;

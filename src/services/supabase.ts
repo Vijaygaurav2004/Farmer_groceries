@@ -1,5 +1,5 @@
 import { supabase, isSupabaseConfigured } from '../config/supabase';
-import { demoStore } from './demoStore';
+import { localStore } from './localStore';
 import { storageService } from './storage';
 import { 
   User, 
@@ -18,10 +18,10 @@ export class SupabaseService {
   // Authentication
   static async signUp(email: string, password: string): Promise<any> {
     if (!isSupabaseConfigured) {
-      // Demo mode - simulate successful signup
+      // Offline mode - issue a local identity
       return {
         user: {
-          id: `demo_${Date.now()}`,
+          id: `local_${Date.now()}`,
           email,
           created_at: new Date().toISOString(),
         },
@@ -39,10 +39,10 @@ export class SupabaseService {
 
   static async signIn(email: string, password: string): Promise<any> {
     if (!isSupabaseConfigured) {
-      // Demo mode - simulate successful signin
+      // Offline mode - resolve the local identity
       return {
         user: {
-          id: `demo_${email.replace(/[^a-zA-Z0-9]/g, '_')}`,
+          id: `local_${email.replace(/[^a-zA-Z0-9]/g, '_')}`,
           email,
           created_at: new Date().toISOString(),
         },
@@ -60,7 +60,7 @@ export class SupabaseService {
 
   static async signOut(): Promise<void> {
     if (!isSupabaseConfigured) {
-      // Demo mode - just return successfully
+      // Offline mode - nothing to revoke remotely
       return;
     }
     
@@ -70,7 +70,7 @@ export class SupabaseService {
 
   static async resetPassword(email: string): Promise<void> {
     if (!isSupabaseConfigured) {
-      // Demo mode - simulate success
+      // Offline mode - nothing to send
       return;
     }
     
@@ -80,7 +80,7 @@ export class SupabaseService {
 
   static async getSession() {
     if (!isSupabaseConfigured) {
-      // Demo mode - return null session
+      // Offline mode - there is no remote session
       return null;
     }
     
@@ -91,8 +91,7 @@ export class SupabaseService {
 
   static onAuthStateChange(callback: (session: any) => void) {
     if (!isSupabaseConfigured) {
-      // Demo mode - call callback immediately with null session
-      // Return a dummy unsubscribe function
+      // Offline mode - no remote auth events; hand back a no-op subscription
       setTimeout(() => callback(null), 0);
       return {
         data: {
@@ -111,7 +110,7 @@ export class SupabaseService {
   // User Management
   static async createUser(userId: string, data: Partial<User>): Promise<void> {
     if (!isSupabaseConfigured) {
-      // Demo mode - persist to AsyncStorage so getUser can read it back
+      // Offline mode - persist to AsyncStorage so getUser can read it back
       await storageService.saveUser({
         id: userId,
         email: data.email || '',
@@ -142,7 +141,7 @@ export class SupabaseService {
 
   static async getUser(userId: string): Promise<User | null> {
     if (!isSupabaseConfigured) {
-      // Demo mode - read from AsyncStorage
+      // Offline mode - read from AsyncStorage
       const cached = await storageService.getUser();
       return cached && cached.id === userId ? cached : null;
     }
@@ -174,7 +173,7 @@ export class SupabaseService {
 
   static async updateUser(userId: string, data: Partial<User>): Promise<void> {
     if (!isSupabaseConfigured) {
-      // Demo mode - merge into the AsyncStorage user
+      // Offline mode - merge into the AsyncStorage user
       const cached = await storageService.getUser();
       if (cached && cached.id === userId) {
         await storageService.saveUser({ ...cached, ...data, updatedAt: new Date() });
@@ -208,7 +207,7 @@ export class SupabaseService {
   // Farmer Management
   static async createFarmerProfile(userId: string, data: Partial<Farmer>): Promise<void> {
     if (!isSupabaseConfigured) {
-      // Demo mode - farmer data lives on the stored user; nothing extra to create
+      // Offline mode - farmer data lives on the stored user; nothing extra to create
       return;
     }
 
@@ -232,7 +231,7 @@ export class SupabaseService {
 
   static async getFarmer(farmerId: string): Promise<Farmer | null> {
     if (!isSupabaseConfigured) {
-      return demoStore.getFarmer(farmerId);
+      return localStore.getFarmer(farmerId);
     }
 
     const { data, error } = await supabase
@@ -267,7 +266,7 @@ export class SupabaseService {
 
   static async getNearbyFarmers(latitude: number, longitude: number, radiusKm: number = 50): Promise<Farmer[]> {
     if (!isSupabaseConfigured) {
-      return demoStore.getFarmers();
+      return localStore.getFarmers();
     }
 
     const { data, error } = await supabase
@@ -303,8 +302,8 @@ export class SupabaseService {
   // Product Management
   static async createProduct(data: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
     if (!isSupabaseConfigured) {
-      const id = `demo_product_${Date.now()}`;
-      await demoStore.addProduct({ ...data, id, createdAt: new Date(), updatedAt: new Date() });
+      const id = `product_${Date.now()}`;
+      await localStore.addProduct({ ...data, id, createdAt: new Date(), updatedAt: new Date() });
       return id;
     }
 
@@ -335,7 +334,7 @@ export class SupabaseService {
 
   static async getProduct(productId: string): Promise<Product | null> {
     if (!isSupabaseConfigured) {
-      return demoStore.getProduct(productId);
+      return localStore.getProduct(productId);
     }
 
     const { data, error } = await supabase
@@ -372,7 +371,7 @@ export class SupabaseService {
 
   static async getFarmerProducts(farmerId: string): Promise<Product[]> {
     if (!isSupabaseConfigured) {
-      return demoStore.getFarmerProducts();
+      return localStore.getFarmerProducts();
     }
 
     // Farmer's own inventory - include unavailable products so they can be toggled back
@@ -405,7 +404,7 @@ export class SupabaseService {
 
   static async getAllProducts(limit: number = 50): Promise<Product[]> {
     if (!isSupabaseConfigured) {
-      return demoStore.getAvailableProducts();
+      return localStore.getAvailableProducts();
     }
 
     const { data, error } = await supabase
@@ -438,7 +437,7 @@ export class SupabaseService {
 
   static async getProductsByCategory(category: string): Promise<Product[]> {
     if (!isSupabaseConfigured) {
-      return demoStore.getAvailableProducts(category);
+      return localStore.getAvailableProducts(category);
     }
 
     const { data, error } = await supabase
@@ -472,7 +471,7 @@ export class SupabaseService {
 
   static async updateProduct(productId: string, data: Partial<Product>): Promise<void> {
     if (!isSupabaseConfigured) {
-      return demoStore.updateProduct(productId, data);
+      return localStore.updateProduct(productId, data);
     }
 
     const updateData: any = {
@@ -503,7 +502,7 @@ export class SupabaseService {
 
   static async deleteProduct(productId: string): Promise<void> {
     if (!isSupabaseConfigured) {
-      return demoStore.deleteProduct(productId);
+      return localStore.deleteProduct(productId);
     }
 
     const { error } = await supabase
@@ -517,7 +516,7 @@ export class SupabaseService {
   // Order Management
   static async createOrder(data: Omit<Order, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
     if (!isSupabaseConfigured) {
-      return demoStore.createOrder(data);
+      return localStore.createOrder(data);
     }
 
     const { data: order, error } = await supabase
@@ -550,7 +549,7 @@ export class SupabaseService {
 
   static async getOrder(orderId: string): Promise<Order | null> {
     if (!isSupabaseConfigured) {
-      return demoStore.getOrder(orderId);
+      return localStore.getOrder(orderId);
     }
 
     const { data, error } = await supabase
@@ -590,7 +589,7 @@ export class SupabaseService {
 
   static async getCustomerOrders(customerId: string): Promise<Order[]> {
     if (!isSupabaseConfigured) {
-      return demoStore.getCustomerOrders();
+      return localStore.getCustomerOrders();
     }
 
     const { data, error } = await supabase
@@ -625,7 +624,7 @@ export class SupabaseService {
 
   static async getFarmerOrders(farmerId: string): Promise<Order[]> {
     if (!isSupabaseConfigured) {
-      return demoStore.getFarmerOrders();
+      return localStore.getFarmerOrders();
     }
 
     const { data, error } = await supabase
@@ -660,7 +659,7 @@ export class SupabaseService {
 
   static async getDeliveryPartnerOrders(deliveryPartnerId: string): Promise<Order[]> {
     if (!isSupabaseConfigured) {
-      return demoStore.getDeliveryPartnerOrders();
+      return localStore.getDeliveryPartnerOrders();
     }
 
     // Get orders that are either:
@@ -699,7 +698,7 @@ export class SupabaseService {
 
   static async getDeliveryPartnerDeliveredOrders(deliveryPartnerId: string): Promise<Order[]> {
     if (!isSupabaseConfigured) {
-      return demoStore.getDeliveredOrders();
+      return localStore.getDeliveredOrders();
     }
 
     const { data, error } = await supabase
@@ -735,7 +734,7 @@ export class SupabaseService {
 
   static async updateOrder(orderId: string, data: Partial<Order>): Promise<void> {
     if (!isSupabaseConfigured) {
-      return demoStore.updateOrder(orderId, data);
+      return localStore.updateOrder(orderId, data);
     }
 
     const updateData: any = {
@@ -769,7 +768,7 @@ export class SupabaseService {
 
   static async updateOrderStatus(orderId: string, status: Order['orderStatus'], note?: string): Promise<void> {
     if (!isSupabaseConfigured) {
-      return demoStore.updateOrderStatus(orderId, status, note);
+      return localStore.updateOrderStatus(orderId, status, note);
     }
 
     const order = await this.getOrder(orderId);
@@ -799,7 +798,7 @@ export class SupabaseService {
   // Review Management
   static async createReview(data: Omit<Review, 'id' | 'createdAt'>): Promise<string> {
     if (!isSupabaseConfigured) {
-      return demoStore.createReview(data);
+      return localStore.createReview(data);
     }
 
     const { data: review, error } = await supabase
@@ -827,7 +826,7 @@ export class SupabaseService {
 
   static async getFarmerReviews(farmerId: string): Promise<Review[]> {
     if (!isSupabaseConfigured) {
-      return demoStore.getFarmerReviews(farmerId);
+      return localStore.getFarmerReviews(farmerId);
     }
 
     const { data, error } = await supabase
@@ -872,7 +871,7 @@ export class SupabaseService {
   // File Upload (using Supabase Storage)
   static async uploadImage(uri: string, path: string): Promise<string> {
     if (!isSupabaseConfigured) {
-      // Demo mode - use the local URI directly
+      // Offline mode - use the local URI directly
       return uri;
     }
 

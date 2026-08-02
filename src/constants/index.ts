@@ -52,7 +52,7 @@ export const FREE_DELIVERY_THRESHOLD = 500;
 export const MAX_DISTANCE_KM = 50;
 export const LOW_STOCK_THRESHOLD = 10;
 
-// Fallback origin used for demo/nearby lookups when a user's live
+// Fallback origin used for nearby lookups when a user's live
 // location isn't available yet (Mumbai).
 export const DEFAULT_COORDINATES = {
   latitude: 19.0760,

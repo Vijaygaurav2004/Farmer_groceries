@@ -6,7 +6,10 @@
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "test": "npm run test:e2e && npm run test:validation",
+    "test:e2e": "node tests/e2e/walkthrough.mjs",
+    "test:validation": "node tests/e2e/validation.mjs"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
@@ -40,6 +43,7 @@
     "@babel/core": "^7.24.0",
     "@types/react": "~19.1.10",
     "babel-preset-expo": "~54.0.9",
+    "puppeteer-core": "^23.0.0",
     "typescript": "~5.9.2"
   },
   "private": true

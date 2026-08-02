@@ -22,7 +22,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [, setJustLoggedIn] = useState(false);
   const isInitialLoadRef = useRef(true);
 
-  // Load user on mount: Supabase session first, AsyncStorage fallback (demo mode)
+  // Load user on mount: Supabase session first, AsyncStorage fallback (offline mode)
   useEffect(() => {
     const loadUser = async () => {
       try {
@@ -39,7 +39,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return;
         }
 
-        // No session (demo mode) - restore from AsyncStorage
+        // No session (offline mode) - restore from AsyncStorage
         const cachedUser = await storageService.getUser();
         if (cachedUser) {
           setUser(cachedUser);
@@ -56,7 +56,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     loadUser();
   }, []);
 
-  // Listen to auth state changes (real Supabase only; demo fires once with null)
+  // Listen to auth state changes (cloud backend only; offline mode fires once with null)
   useEffect(() => {
     const { data: { subscription } } = SupabaseService.onAuthStateChange(async (session) => {
       if (isInitialLoadRef.current) return;

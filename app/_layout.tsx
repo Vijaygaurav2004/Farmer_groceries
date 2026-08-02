@@ -76,7 +76,7 @@ function RootLayoutNav() {
       router.replace('/role-select');
     } else if ((user || role) && role) {
       // Redirect to appropriate home based on role if user is in wrong section
-      // Allow access with just role (demo mode) OR with user + role
+      // Allow access with just role (offline mode) OR with user + role
       const inWrongSection = (role === 'customer' && !inCustomerGroup) ||
                              (role === 'farmer' && !inFarmerGroup) ||
                              (role === 'delivery' && !inDeliveryGroup);

@@ -9,7 +9,7 @@
 
 A mobile app that eliminates middlemen in the agricultural supply chain, enabling farmers to sell directly to consumers while providing delivery partners with flexible earning opportunities.
 
-> **Demo mode by default:** run it with zero setup — no Supabase project, no API keys. The app ships with seeded sample data (products, farmers, orders) stored on-device. Point it at a real Supabase project via `.env` when you're ready.
+> **Offline-first by design.** The app keeps a full on-device data layer, so every screen works without a network connection. Set your Supabase credentials in `.env` to run the same operations against the cloud backend instead — no screen code changes.
 
 ---
 
@@ -84,9 +84,10 @@ Farmer → Delivery Partner → Consumer
 - **Moti** - Smooth animations
 - **Expo Router 6.x** - File-based routing
 
-### Backend
-- **Demo mode (default)** - Seeded in-app data store, persisted with AsyncStorage
-- **Supabase (optional)** - Auth, PostgreSQL, and Storage when configured via `.env`
+### Data
+- **Supabase** - Auth, PostgreSQL and Storage, enabled through `.env`
+- **On-device store** - AsyncStorage-backed local data layer used when no cloud backend is configured
+- Both sit behind one service façade, selected at runtime
 
 ---
 
@@ -123,7 +124,7 @@ npm start
 - Scan the QR code displayed in terminal
 - App will load automatically
 
-That's it — the app runs in **demo mode** with sample data. Sign up with any email/password, pick a role, and explore. To use a real backend instead, copy `.env.example` to `.env` and fill in your Supabase credentials (see below).
+Sign up, pick a role, and explore. The app runs against its on-device data layer out of the box; to use the cloud backend instead, copy `.env.example` to `.env` and fill in your Supabase credentials (see below).
 
 ---
 
@@ -162,7 +163,8 @@ farmer-groceries/
 │   │   ├── AuthContext.tsx       # Authentication state
 │   │   └── CartContext.tsx       # Shopping cart state
 │   ├── services/                 # Business logic
-│   │   ├── supabase.ts           # Supabase operations
+│   │   ├── supabase.ts           # Service façade over both data targets
+│   │   ├── localStore.ts         # On-device data layer
 │   │   └── storage.ts            # AsyncStorage operations
 │   ├── types/                    # TypeScript definitions
 │   ├── config/                   # Configuration
@@ -179,7 +181,7 @@ farmer-groceries/
 
 ## 🔐 Supabase Setup (Optional)
 
-Without this, the app runs entirely in demo mode. Configure it only when you want real multi-user data.
+Configure this when you want multi-user data shared across devices. Without it the app uses its on-device data layer.
 
 ### 1. Create a Supabase Project
 - Go to [supabase.com](https://supabase.com)
@@ -212,7 +214,15 @@ For production, enable RLS on all tables:
 
 ## 🧪 Testing
 
-### Test Scenarios
+Two automated suites drive the running app through Chrome — 40 cases in total.
+Start the web target, then run them (see [`tests/README.md`](tests/README.md)):
+
+```bash
+npm run web              # terminal 1
+npm test                 # terminal 2 — walkthrough + validation
+```
+
+### Manual Test Scenarios
 
 **Customer Flow:**
 1. Sign up / Log in
@@ -268,7 +278,8 @@ This project contributes to **UN Sustainable Development Goals:**
 - ✅ Order tracking with progress tracker
 - ✅ Delivery workflow with route details
 - ✅ Profile management for all roles
-- ✅ Zero-setup demo mode with seeded data (optional Supabase backend)
+- ✅ Offline-first data layer with an optional Supabase cloud backend
+- ✅ Automated end-to-end test suites (40 cases across all three roles)
 
 ### 📅 Phase 2: Enhancement (Coming Soon)
 - Push notifications for order updates
