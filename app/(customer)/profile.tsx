@@ -1,290 +1,150 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  Alert,
-  TextInput,
-  Modal,
-  ActivityIndicator,
-} from 'react-native';
+import { View, Text, ScrollView, Alert, Modal } from 'react-native';
 import { useRouter } from 'expo-router';
-import { MotiView } from 'moti';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { SupabaseService } from '../../src/services/supabase';
 import { APP_CONFIG, SUCCESS_MESSAGES } from '../../src/constants';
 import { validatePhone } from '../../src/utils/helpers';
+import { Button, Input, PressableScale, useToast, FadeInUp, Divider } from '../../src/components/ui';
+import { palette, radii, shadows, gradients } from '../../src/theme';
+
+type IoniconName = keyof typeof Ionicons.glyphMap;
 
 export default function ProfileScreen() {
   const { user, signOut, refreshUser } = useAuth();
   const router = useRouter();
+  const toast = useToast();
   const [editModalVisible, setEditModalVisible] = useState(false);
-  const [addressModalVisible, setAddressModalVisible] = useState(false);
   const [name, setName] = useState(user?.name || '');
   const [phone, setPhone] = useState(user?.phoneNumber || '');
   const [saving, setSaving] = useState(false);
 
   const handleSignOut = () => {
-    Alert.alert(
-      'Sign Out',
-      'Are you sure you want to sign out?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Sign Out',
-          style: 'destructive',
-          onPress: async () => {
-            await signOut();
-            router.replace('/(auth)/login');
-          },
-        },
-      ]
-    );
+    Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Sign Out', style: 'destructive', onPress: async () => { await signOut(); router.replace('/(auth)/login'); } },
+    ]);
   };
 
   const handleSaveProfile = async () => {
-    if (!name.trim()) {
-      Alert.alert('Missing Name', 'Please enter your full name');
-      return;
-    }
-
-    if (phone && !validatePhone(phone.replace(/\D/g, '').slice(-10))) {
-      Alert.alert('Invalid Phone', 'Please enter a valid 10-digit Indian mobile number');
-      return;
-    }
-
+    if (!name.trim()) return toast.show('Please enter your name', 'error');
+    if (phone && !validatePhone(phone.replace(/\D/g, '').slice(-10))) return toast.show('Enter a valid 10-digit number', 'error');
     if (!user) return;
-
     setSaving(true);
     try {
       await SupabaseService.updateUser(user.id, { name: name.trim(), phoneNumber: phone });
       await refreshUser();
-      Alert.alert('Success', SUCCESS_MESSAGES.profileUpdated);
+      toast.show(SUCCESS_MESSAGES.profileUpdated, 'success');
       setEditModalVisible(false);
-    } catch (error) {
-      console.error('Error updating profile:', error);
-      Alert.alert('Error', 'Failed to update profile. Please try again.');
-    } finally {
-      setSaving(false);
-    }
+    } catch { toast.show('Failed to update profile', 'error'); }
+    finally { setSaving(false); }
   };
 
-  const menuItems = [
-    { 
-      icon: '👤', 
-      label: 'Edit Profile', 
-      action: () => setEditModalVisible(true),
-      description: 'Update your personal information'
+  const menuGroups: { title: string; items: { icon: IoniconName; label: string; action: () => void; color: string }[] }[] = [
+    {
+      title: 'Account',
+      items: [
+        { icon: 'person-outline', label: 'Edit Profile', color: palette.green600, action: () => setEditModalVisible(true) },
+        { icon: 'location-outline', label: 'Saved Addresses', color: palette.sky, action: () => toast.show('Add addresses at checkout', 'info') },
+        { icon: 'card-outline', label: 'Payment Methods', color: palette.violet, action: () => toast.show('Manage payment methods', 'info') },
+        { icon: 'notifications-outline', label: 'Notifications', color: palette.amber500, action: () => toast.show('Notification settings', 'info') },
+      ],
     },
-    { 
-      icon: '📍', 
-      label: 'Saved Addresses', 
-      action: () => setAddressModalVisible(true),
-      description: 'Manage your delivery addresses'
-    },
-    { 
-      icon: '💳', 
-      label: 'Payment Methods', 
-      action: () => Alert.alert('Payment Methods', 'Manage your saved payment methods'),
-      description: 'Add or remove payment options'
-    },
-    { 
-      icon: '🔔', 
-      label: 'Notifications', 
-      action: () => Alert.alert('Notifications', 'Notification preferences'),
-      description: 'Manage notification settings'
-    },
-    { 
-      icon: '❓', 
-      label: 'Help & Support', 
-      action: () =>
-        Alert.alert(
-          'Help & Support',
-          `Email: ${APP_CONFIG.supportEmail}\nPhone: ${APP_CONFIG.supportPhone}`
-        ),
-      description: 'Get help with your orders'
-    },
-    { 
-      icon: '📄', 
-      label: 'Terms & Conditions', 
-      action: () => Alert.alert('Terms & Conditions', 'View our terms of service'),
-      description: 'Read our terms of service'
-    },
-    { 
-      icon: '🔒', 
-      label: 'Privacy Policy', 
-      action: () => Alert.alert('Privacy Policy', 'View our privacy policy'),
-      description: 'How we protect your data'
+    {
+      title: 'Support',
+      items: [
+        { icon: 'help-circle-outline', label: 'Help & Support', color: palette.green600, action: () => Alert.alert('Help & Support', `Email: ${APP_CONFIG.supportEmail}\nPhone: ${APP_CONFIG.supportPhone}`) },
+        { icon: 'document-text-outline', label: 'Terms & Conditions', color: palette.slate500, action: () => toast.show('Terms of service', 'info') },
+        { icon: 'shield-checkmark-outline', label: 'Privacy Policy', color: palette.slate500, action: () => toast.show('Privacy policy', 'info') },
+      ],
     },
   ];
 
   return (
-    <View className="flex-1 bg-white">
-      {/* Header */}
-      <View className="px-6 pt-14 pb-6 bg-primary-600">
-        <View className="items-center">
-          <View className="w-24 h-24 bg-white rounded-full items-center justify-center mb-3">
-            <Text className="text-5xl">👤</Text>
+    <View style={{ flex: 1, backgroundColor: palette.slate50 }}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
+        {/* Header */}
+        <LinearGradient colors={gradients.brand as any} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ paddingTop: 60, paddingBottom: 30, alignItems: 'center', borderBottomLeftRadius: 30, borderBottomRightRadius: 30 }}>
+          <FadeInUp>
+            <View style={{ alignItems: 'center' }}>
+              <View style={[{ width: 92, height: 92, borderRadius: 46, backgroundColor: palette.white, alignItems: 'center', justifyContent: 'center', marginBottom: 12 }, shadows.md]}>
+                <Text style={{ fontSize: 46 }}>🧑‍🌾</Text>
+              </View>
+              <Text style={{ fontSize: 22, fontWeight: '900', color: palette.white }}>{user?.name || 'Guest User'}</Text>
+              <Text style={{ fontSize: 13.5, color: 'rgba(255,255,255,0.85)', marginTop: 3 }}>{user?.email || 'guest@example.com'}</Text>
+            </View>
+          </FadeInUp>
+        </LinearGradient>
+
+        {/* Stats */}
+        <FadeInUp style={{ flexDirection: 'row', marginHorizontal: 18, marginTop: -22 } as any}>
+          <View style={[{ flex: 1, backgroundColor: palette.white, borderRadius: radii.lg, paddingVertical: 16, alignItems: 'center', marginRight: 6 }, shadows.md]}>
+            <Text style={{ fontSize: 20, fontWeight: '900', color: palette.green700 }}>12</Text>
+            <Text style={{ fontSize: 11.5, color: palette.slate400, marginTop: 2 }}>Orders</Text>
           </View>
-          <Text className="text-white text-2xl font-bold mb-1">
-            {user?.name || 'Guest User'}
-          </Text>
-          <Text className="text-primary-100 text-sm">
-            {user?.email || 'guest@example.com'}
-          </Text>
-          {user?.phoneNumber && (
-            <Text className="text-primary-100 text-sm mt-1">
-              {user.phoneNumber}
-            </Text>
-          )}
-        </View>
-      </View>
+          <View style={[{ flex: 1, backgroundColor: palette.white, borderRadius: radii.lg, paddingVertical: 16, alignItems: 'center', marginHorizontal: 6 }, shadows.md]}>
+            <Text style={{ fontSize: 20, fontWeight: '900', color: palette.coral }}>8</Text>
+            <Text style={{ fontSize: 11.5, color: palette.slate400, marginTop: 2 }}>Favorites</Text>
+          </View>
+          <View style={[{ flex: 1, backgroundColor: palette.white, borderRadius: radii.lg, paddingVertical: 16, alignItems: 'center', marginLeft: 6 }, shadows.md]}>
+            <Text style={{ fontSize: 20, fontWeight: '900', color: palette.amber600 }}>₹2.4k</Text>
+            <Text style={{ fontSize: 11.5, color: palette.slate400, marginTop: 2 }}>Saved</Text>
+          </View>
+        </FadeInUp>
 
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-        <View className="px-6 py-6">
-          {/* Menu Items */}
-          {menuItems.map((item, index) => (
-            <MotiView
-              key={item.label}
-              from={{ opacity: 0, translateX: -20 }}
-              animate={{ opacity: 1, translateX: 0 }}
-              transition={{ type: 'timing', duration: 300, delay: index * 50 }}
-            >
-              <TouchableOpacity
-                onPress={item.action}
-                className="py-4 border-b border-gray-100"
-              >
-                <View className="flex-row items-center">
-                  <View className="w-10 h-10 bg-gray-100 rounded-full items-center justify-center mr-4">
-                    <Text className="text-xl">{item.icon}</Text>
-                  </View>
-                  <View className="flex-1">
-                    <Text className="text-base font-semibold text-gray-900 mb-1">
-                      {item.label}
-                    </Text>
-                    <Text className="text-xs text-gray-500">
-                      {item.description}
-                    </Text>
-                  </View>
-                  <Text className="text-gray-400 text-xl">›</Text>
+        {/* Menu */}
+        {menuGroups.map((group) => (
+          <View key={group.title} style={{ marginTop: 22, paddingHorizontal: 18 }}>
+            <Text style={{ fontSize: 13, fontWeight: '800', color: palette.slate400, marginBottom: 10, marginLeft: 4, textTransform: 'uppercase', letterSpacing: 0.5 }}>{group.title}</Text>
+            <View style={[{ backgroundColor: palette.white, borderRadius: radii.lg, overflow: 'hidden' }, shadows.sm]}>
+              {group.items.map((item, idx) => (
+                <View key={item.label}>
+                  <PressableScale onPress={item.action} scaleTo={0.99} haptic={false}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 15 }}>
+                      <View style={{ width: 38, height: 38, borderRadius: 12, backgroundColor: item.color + '18', alignItems: 'center', justifyContent: 'center' }}>
+                        <Ionicons name={item.icon} size={19} color={item.color} />
+                      </View>
+                      <Text style={{ flex: 1, fontSize: 15, fontWeight: '700', color: palette.ink, marginLeft: 14 }}>{item.label}</Text>
+                      <Ionicons name="chevron-forward" size={18} color={palette.slate300} />
+                    </View>
+                  </PressableScale>
+                  {idx < group.items.length - 1 ? <Divider style={{ marginLeft: 68 }} /> : null}
                 </View>
-              </TouchableOpacity>
-            </MotiView>
-          ))}
+              ))}
+            </View>
+          </View>
+        ))}
 
-          {/* Sign Out */}
-          <MotiView
-            from={{ opacity: 0, translateY: 20 }}
-            animate={{ opacity: 1, translateY: 0 }}
-            transition={{ type: 'timing', duration: 300, delay: 400 }}
-            className="mt-6"
-          >
-            <TouchableOpacity
-              onPress={handleSignOut}
-              className="bg-red-50 border border-red-200 rounded-xl py-4 items-center"
-            >
-              <Text className="text-red-600 font-semibold text-base">
-                🚪 Sign Out
-              </Text>
-            </TouchableOpacity>
-          </MotiView>
-
-          {/* Version */}
-          <Text className="text-center text-gray-400 text-sm mt-6 mb-4">
-            {APP_CONFIG.name} v{APP_CONFIG.version}
-          </Text>
+        <View style={{ paddingHorizontal: 18, marginTop: 24 }}>
+          <PressableScale onPress={handleSignOut}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#fef2f2', borderRadius: radii.pill, paddingVertical: 16 }}>
+              <Ionicons name="log-out-outline" size={20} color={palette.coral} />
+              <Text style={{ fontSize: 15.5, fontWeight: '800', color: palette.coral, marginLeft: 8 }}>Sign Out</Text>
+            </View>
+          </PressableScale>
+          <Text style={{ textAlign: 'center', fontSize: 12, color: palette.slate400, marginTop: 18 }}>{APP_CONFIG.name} · v{APP_CONFIG.version}</Text>
         </View>
       </ScrollView>
 
       {/* Edit Profile Modal */}
-      <Modal
-        visible={editModalVisible}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setEditModalVisible(false)}
-      >
-        <View className="flex-1 justify-end bg-black/50">
-          <View className="bg-white rounded-t-3xl p-6" style={{ maxHeight: '80%' }}>
-            <View className="flex-row justify-between items-center mb-6">
-              <Text className="text-xl font-bold text-gray-900">Edit Profile</Text>
-              <TouchableOpacity onPress={() => setEditModalVisible(false)}>
-                <Text className="text-2xl text-gray-400">×</Text>
-              </TouchableOpacity>
+      <Modal visible={editModalVisible} animationType="slide" transparent onRequestClose={() => setEditModalVisible(false)}>
+        <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(15,23,42,0.5)' }}>
+          <View style={{ backgroundColor: palette.white, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 22, paddingBottom: 34 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <Text style={{ fontSize: 20, fontWeight: '900', color: palette.ink }}>Edit Profile</Text>
+              <PressableScale onPress={() => setEditModalVisible(false)} scaleTo={0.85}>
+                <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: palette.slate100, alignItems: 'center', justifyContent: 'center' }}>
+                  <Ionicons name="close" size={20} color={palette.slate500} />
+                </View>
+              </PressableScale>
             </View>
-
-            <View className="mb-4">
-              <Text className="text-sm font-medium text-gray-700 mb-2">Full Name</Text>
-              <TextInput
-                value={name}
-                onChangeText={setName}
-                placeholder="Enter your name"
-                className="border border-gray-300 rounded-lg px-4 py-3 text-base"
-              />
+            <Input label="Full Name" icon="person-outline" value={name} onChangeText={setName} placeholder="Enter your name" />
+            <Input label="Phone Number" icon="call-outline" prefix="+91" value={phone} onChangeText={setPhone} placeholder="Phone number" keyboardType="phone-pad" />
+            <View style={{ marginTop: 8 }}>
+              <Button label="Save Changes" icon="checkmark" loading={saving} onPress={handleSaveProfile} size="lg" />
             </View>
-
-            <View className="mb-6">
-              <Text className="text-sm font-medium text-gray-700 mb-2">Phone Number</Text>
-              <TextInput
-                value={phone}
-                onChangeText={setPhone}
-                placeholder="Enter phone number"
-                keyboardType="phone-pad"
-                className="border border-gray-300 rounded-lg px-4 py-3 text-base"
-              />
-            </View>
-
-            <TouchableOpacity
-              onPress={handleSaveProfile}
-              disabled={saving}
-              className={`bg-primary-600 rounded-xl py-4 items-center ${saving ? 'opacity-50' : ''}`}
-            >
-              {saving ? (
-                <ActivityIndicator color="white" />
-              ) : (
-                <Text className="text-white font-semibold text-base">Save Changes</Text>
-              )}
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Address Modal */}
-      <Modal
-        visible={addressModalVisible}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setAddressModalVisible(false)}
-      >
-        <View className="flex-1 justify-end bg-black/50">
-          <View className="bg-white rounded-t-3xl p-6" style={{ maxHeight: '80%' }}>
-            <View className="flex-row justify-between items-center mb-6">
-              <Text className="text-xl font-bold text-gray-900">Saved Addresses</Text>
-              <TouchableOpacity onPress={() => setAddressModalVisible(false)}>
-                <Text className="text-2xl text-gray-400">×</Text>
-              </TouchableOpacity>
-            </View>
-
-            <View className="bg-gray-50 rounded-xl p-4 mb-4">
-              <Text className="text-base font-semibold text-gray-900 mb-2">
-                🏠 Home
-              </Text>
-              <Text className="text-sm text-gray-600">
-                Enter your delivery address when placing an order
-              </Text>
-            </View>
-
-            <TouchableOpacity
-              onPress={() => {
-                setAddressModalVisible(false);
-                Alert.alert('Add Address', 'Add new address feature coming soon!');
-              }}
-              className="border-2 border-dashed border-primary-300 rounded-xl py-4 items-center"
-            >
-              <Text className="text-primary-600 font-semibold text-base">
-                + Add New Address
-              </Text>
-            </TouchableOpacity>
           </View>
         </View>
       </Modal>

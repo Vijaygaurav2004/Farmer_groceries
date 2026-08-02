@@ -1,334 +1,173 @@
 import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  ActivityIndicator,
-  Alert,
-  RefreshControl,
-} from 'react-native';
+import { View, Text, ScrollView, ActivityIndicator, Alert, RefreshControl } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { MotiView } from 'moti';
+import { Ionicons } from '@expo/vector-icons';
 import { SupabaseService } from '../../../src/services/supabase';
 import { Order } from '../../../src/types';
 import { canCancelOrder, getEstimatedDeliveryTime } from '../../../src/utils/helpers';
+import { Button, IconButton, EmptyState, useToast, Divider } from '../../../src/components/ui';
+import { palette, radii, shadows } from '../../../src/theme';
 
-const orderStatusSteps = [
-  { key: 'placed', label: 'Order Placed', icon: '📝' },
-  { key: 'confirmed', label: 'Confirmed', icon: '✅' },
-  { key: 'packed', label: 'Packed', icon: '📦' },
-  { key: 'assigned', label: 'Assigned to Delivery', icon: '🚚' },
-  { key: 'picked_up', label: 'Picked Up', icon: '📍' },
-  { key: 'out_for_delivery', label: 'Out for Delivery', icon: '🚛' },
-  { key: 'delivered', label: 'Delivered', icon: '✓' },
+const steps = [
+  { key: 'placed', label: 'Order Placed', icon: 'receipt-outline' as const },
+  { key: 'confirmed', label: 'Confirmed', icon: 'checkmark-done-outline' as const },
+  { key: 'packed', label: 'Packed', icon: 'cube-outline' as const },
+  { key: 'assigned', label: 'Assigned to Delivery', icon: 'bicycle-outline' as const },
+  { key: 'picked_up', label: 'Picked Up', icon: 'walk-outline' as const },
+  { key: 'out_for_delivery', label: 'Out for Delivery', icon: 'car-outline' as const },
+  { key: 'delivered', label: 'Delivered', icon: 'home-outline' as const },
 ];
 
 export default function TrackOrderScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const toast = useToast();
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [cancelling, setCancelling] = useState(false);
 
-  useEffect(() => {
-    loadOrder();
-  }, [id]);
+  useEffect(() => { loadOrder(); }, [id]);
 
   const loadOrder = async () => {
-    try {
-      setLoading(true);
-      const orderData = await SupabaseService.getOrder(id);
-      setOrder(orderData);
-    } catch (error) {
-      console.error('Error loading order:', error);
-      Alert.alert('Error', 'Failed to load order details');
-    } finally {
-      setLoading(false);
-    }
+    try { setLoading(true); setOrder(await SupabaseService.getOrder(id)); }
+    catch { toast.show('Failed to load order', 'error'); }
+    finally { setLoading(false); }
   };
-
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    await loadOrder();
-    setRefreshing(false);
-  };
+  const handleRefresh = async () => { setRefreshing(true); await loadOrder(); setRefreshing(false); };
 
   const handleCancelOrder = () => {
     if (!order) return;
-
-    Alert.alert(
-      'Cancel Order',
-      'Are you sure you want to cancel this order? This cannot be undone.',
-      [
-        { text: 'No', style: 'cancel' },
-        {
-          text: 'Yes, Cancel',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              setCancelling(true);
-              await SupabaseService.updateOrderStatus(order.id, 'cancelled', 'Cancelled by customer');
-              await loadOrder();
-            } catch (error) {
-              console.error('Error cancelling order:', error);
-              Alert.alert('Error', 'Failed to cancel order. Please try again.');
-            } finally {
-              setCancelling(false);
-            }
-          },
-        },
-      ]
-    );
+    Alert.alert('Cancel Order', 'Are you sure? This cannot be undone.', [
+      { text: 'No', style: 'cancel' },
+      { text: 'Yes, Cancel', style: 'destructive', onPress: async () => {
+        try { setCancelling(true); await SupabaseService.updateOrderStatus(order.id, 'cancelled', 'Cancelled by customer'); await loadOrder(); toast.show('Order cancelled', 'info'); }
+        catch { toast.show('Failed to cancel order', 'error'); }
+        finally { setCancelling(false); }
+      } },
+    ]);
   };
 
-  const getCurrentStepIndex = () => {
-    if (!order) return 0;
-    return orderStatusSteps.findIndex(step => step.key === order.orderStatus);
-  };
+  const fmt = (date: Date) => new Date(date).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 
-  const formatDate = (date: Date) => {
-    return new Date(date).toLocaleString('en-IN', {
-      day: 'numeric',
-      month: 'short',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
+  if (loading) return <View style={{ flex: 1, backgroundColor: palette.white, alignItems: 'center', justifyContent: 'center' }}><ActivityIndicator size="large" color={palette.green600} /></View>;
+  if (!order) return <View style={{ flex: 1, backgroundColor: palette.white }}><EmptyState icon="📦" title="Order not found"><Button label="Go Back" icon="arrow-back" onPress={() => router.back()} /></EmptyState></View>;
 
-  if (loading) {
-    return (
-      <View className="flex-1 bg-white items-center justify-center">
-        <ActivityIndicator size="large" color="#22c55e" />
-      </View>
-    );
-  }
-
-  if (!order) {
-    return (
-      <View className="flex-1 bg-white items-center justify-center px-6">
-        <Text className="text-6xl mb-4">📦</Text>
-        <Text className="text-xl font-bold text-gray-900 mb-2">Order Not Found</Text>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          className="bg-primary-600 px-6 py-3 rounded-lg mt-4"
-        >
-          <Text className="text-white font-semibold">Go Back</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
-
-  const currentStepIndex = getCurrentStepIndex();
+  const currentStepIndex = steps.findIndex((s) => s.key === order.orderStatus);
   const isDelivered = order.orderStatus === 'delivered';
   const isCancelled = order.orderStatus === 'cancelled';
+  const heroColor = isDelivered ? palette.green600 : isCancelled ? palette.coral : palette.amber500;
+  const heroBg = isDelivered ? palette.green50 : isCancelled ? '#fef2f2' : '#fffbeb';
 
   return (
-    <View className="flex-1 bg-white">
-      {/* Header */}
-      <View className="flex-row items-center px-6 pt-14 pb-4 border-b border-gray-200">
-        <TouchableOpacity
-          onPress={() => router.back()}
-          className="mr-4 w-10 h-10 items-center justify-center"
-        >
-          <Text className="text-2xl">←</Text>
-        </TouchableOpacity>
-        <View className="flex-1">
-          <Text className="text-xl font-bold text-gray-900">Track Order</Text>
-          <Text className="text-sm text-gray-500">{order.orderNumber}</Text>
+    <View style={{ flex: 1, backgroundColor: palette.slate50 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', paddingTop: 52, paddingHorizontal: 18, paddingBottom: 12 }}>
+        <IconButton icon="arrow-back" onPress={() => router.back()} />
+        <View style={{ marginLeft: 14 }}>
+          <Text style={{ fontSize: 20, fontWeight: '900', color: palette.ink }}>Track Order</Text>
+          <Text style={{ fontSize: 12.5, color: palette.slate400 }}>#{order.orderNumber}</Text>
         </View>
       </View>
 
-      <ScrollView
-        className="flex-1"
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
-        }
-      >
-        {/* Order Status Card */}
-        <MotiView
-          from={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ type: 'timing', duration: 300 }}
-          className={`mx-6 mt-6 p-6 rounded-xl ${
-            isDelivered ? 'bg-green-50' : isCancelled ? 'bg-red-50' : 'bg-primary-50'
-          }`}
-        >
-          <Text className="text-4xl text-center mb-2">
-            {isDelivered ? '✓' : isCancelled ? '✗' : orderStatusSteps[currentStepIndex]?.icon}
+      <ScrollView showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={palette.green600} />} contentContainerStyle={{ padding: 18, paddingBottom: 20 }}>
+        {/* Status hero */}
+        <View style={{ backgroundColor: heroBg, borderRadius: radii.lg, padding: 22, alignItems: 'center' }}>
+          <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: palette.white, alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
+            <Ionicons name={isDelivered ? 'checkmark-circle' : isCancelled ? 'close-circle' : (steps[currentStepIndex]?.icon || 'time-outline')} size={36} color={heroColor} />
+          </View>
+          <Text style={{ fontSize: 20, fontWeight: '900', color: palette.ink }}>
+            {isDelivered ? 'Delivered' : isCancelled ? 'Cancelled' : steps[currentStepIndex]?.label}
           </Text>
-          <Text className="text-xl font-bold text-center text-gray-900 mb-1">
-            {isDelivered
-              ? 'Delivered'
-              : isCancelled
-              ? 'Cancelled'
-              : orderStatusSteps[currentStepIndex]?.label}
-          </Text>
-          <Text className="text-sm text-center text-gray-600">
-            {formatDate(order.updatedAt)}
-          </Text>
-          {!isDelivered && !isCancelled && (
-            <Text className="text-sm text-center text-gray-600 mt-1">
-              Estimated delivery by {formatDate(getEstimatedDeliveryTime(order.createdAt))}
-            </Text>
-          )}
-        </MotiView>
+          <Text style={{ fontSize: 13, color: palette.slate500, marginTop: 3 }}>{fmt(order.updatedAt)}</Text>
+          {!isDelivered && !isCancelled ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 10, backgroundColor: palette.white, paddingHorizontal: 12, paddingVertical: 6, borderRadius: radii.pill }}>
+              <Ionicons name="time-outline" size={14} color={palette.amber600} />
+              <Text style={{ fontSize: 12.5, color: palette.slate600, marginLeft: 5, fontWeight: '600' }}>Est. by {fmt(getEstimatedDeliveryTime(order.createdAt))}</Text>
+            </View>
+          ) : null}
+        </View>
 
-        {/* Progress Tracker */}
+        {/* Timeline */}
         {!isCancelled && (
-          <View className="px-6 py-8">
-            {orderStatusSteps.map((step, index) => {
-              const isCompleted = index <= currentStepIndex;
-              const isCurrent = index === currentStepIndex;
-
+          <View style={[{ backgroundColor: palette.white, borderRadius: radii.lg, padding: 20, marginTop: 16 }, shadows.sm]}>
+            {steps.map((step, index) => {
+              const done = index <= currentStepIndex;
+              const current = index === currentStepIndex;
+              const last = index === steps.length - 1;
               return (
-                <MotiView
-                  key={step.key}
-                  from={{ opacity: 0, translateX: -20 }}
-                  animate={{ opacity: 1, translateX: 0 }}
-                  transition={{ type: 'timing', duration: 300, delay: index * 50 }}
-                  className="flex-row items-center mb-6"
-                >
-                  {/* Icon */}
-                  <View
-                    className={`w-12 h-12 rounded-full items-center justify-center ${
-                      isCompleted ? 'bg-primary-600' : 'bg-gray-200'
-                    }`}
-                  >
-                    {isCompleted ? (
-                      <Text className="text-white text-xl">✓</Text>
-                    ) : (
-                      <Text className="text-gray-400 text-xl">{step.icon}</Text>
-                    )}
+                <View key={step.key} style={{ flexDirection: 'row' }}>
+                  <View style={{ alignItems: 'center', marginRight: 14 }}>
+                    <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: done ? palette.green600 : palette.slate100, alignItems: 'center', justifyContent: 'center' }}>
+                      <Ionicons name={done ? 'checkmark' : step.icon} size={19} color={done ? palette.white : palette.slate400} />
+                    </View>
+                    {!last ? <View style={{ width: 2.5, flex: 1, minHeight: 26, backgroundColor: index < currentStepIndex ? palette.green500 : palette.slate100, marginVertical: 2 }} /> : null}
                   </View>
-
-                  {/* Text */}
-                  <View className="flex-1 ml-4">
-                    <Text
-                      className={`text-base font-semibold ${
-                        isCompleted ? 'text-gray-900' : 'text-gray-400'
-                      }`}
-                    >
-                      {step.label}
-                    </Text>
-                    {isCurrent && (
-                      <Text className="text-sm text-primary-600 mt-1">In Progress</Text>
-                    )}
+                  <View style={{ flex: 1, paddingBottom: last ? 0 : 14, paddingTop: 6 }}>
+                    <Text style={{ fontSize: 15, fontWeight: done ? '800' : '600', color: done ? palette.ink : palette.slate400 }}>{step.label}</Text>
+                    {current ? <Text style={{ fontSize: 12.5, color: palette.green600, marginTop: 2, fontWeight: '700' }}>In progress…</Text> : null}
                   </View>
-
-                  {/* Connector Line */}
-                  {index < orderStatusSteps.length - 1 && (
-                    <View
-                      className={`absolute left-6 top-12 w-0.5 h-6 ${
-                        isCompleted ? 'bg-primary-600' : 'bg-gray-200'
-                      }`}
-                      style={{ marginLeft: -1 }}
-                    />
-                  )}
-                </MotiView>
+                </View>
               );
             })}
           </View>
         )}
 
-        {/* Order Details */}
-        <View className="px-6 pb-6">
-          <Text className="text-lg font-bold text-gray-900 mb-4">Order Details</Text>
-
-          {/* Items */}
-          <View className="bg-gray-50 rounded-xl p-4 mb-4">
-            {order.items.map((item, index) => (
-              <View
-                key={index}
-                className={`flex-row justify-between items-center ${
-                  index < order.items.length - 1 ? 'mb-3 pb-3 border-b border-gray-200' : ''
-                }`}
-              >
-                <View className="flex-1">
-                  <Text className="text-base font-semibold text-gray-900">
-                    {item.productName}
-                  </Text>
-                  <Text className="text-sm text-gray-600">
-                    {item.quantity} {item.unit} × ₹{item.pricePerUnit}
-                  </Text>
+        {/* Items */}
+        <Text style={{ fontSize: 16, fontWeight: '800', color: palette.ink, marginTop: 20, marginBottom: 10 }}>Order Details</Text>
+        <View style={[{ backgroundColor: palette.white, borderRadius: radii.lg, padding: 16 }, shadows.sm]}>
+          {order.items.map((item, index) => (
+            <View key={index}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 14.5, fontWeight: '700', color: palette.ink }}>{item.productName}</Text>
+                  <Text style={{ fontSize: 12.5, color: palette.slate400, marginTop: 2 }}>{item.quantity} {item.unit} × ₹{item.pricePerUnit}</Text>
                 </View>
-                <Text className="text-base font-bold text-gray-900">
-                  ₹{item.total}
-                </Text>
+                <Text style={{ fontSize: 15, fontWeight: '800', color: palette.ink }}>₹{item.total}</Text>
               </View>
-            ))}
-          </View>
+              {index < order.items.length - 1 ? <Divider style={{ marginVertical: 12 }} /> : null}
+            </View>
+          ))}
+        </View>
 
-          {/* Delivery Address */}
-          <View className="bg-gray-50 rounded-xl p-4 mb-4">
-            <Text className="text-sm font-semibold text-gray-900 mb-2">
-              📍 Delivery Address
-            </Text>
-            <Text className="text-base text-gray-700">
-              {order.deliveryAddress.street}
-            </Text>
-            <Text className="text-base text-gray-700">
-              {order.deliveryAddress.city}, {order.deliveryAddress.state} -{' '}
-              {order.deliveryAddress.pincode}
-            </Text>
-          </View>
-
-          {/* Payment Summary */}
-          <View className="bg-gray-50 rounded-xl p-4">
-            <View className="flex-row justify-between items-center mb-2">
-              <Text className="text-base text-gray-600">Subtotal</Text>
-              <Text className="text-base text-gray-900">₹{order.subtotal}</Text>
-            </View>
-            <View className="flex-row justify-between items-center mb-2">
-              <Text className="text-base text-gray-600">Delivery Fee</Text>
-              <Text className="text-base text-gray-900">₹{order.deliveryFee}</Text>
-            </View>
-            <View className="flex-row justify-between items-center pt-2 border-t border-gray-300">
-              <Text className="text-lg font-bold text-gray-900">Total</Text>
-              <Text className="text-lg font-bold text-primary-600">₹{order.total}</Text>
-            </View>
-            <View className="flex-row justify-between items-center mt-3 pt-3 border-t border-gray-200">
-              <Text className="text-sm text-gray-600">Payment Method</Text>
-              <Text className="text-sm font-semibold text-gray-900 uppercase">
-                {order.paymentMethod}
-              </Text>
-            </View>
+        {/* Address */}
+        <View style={[{ backgroundColor: palette.white, borderRadius: radii.lg, padding: 16, marginTop: 12, flexDirection: 'row' }, shadows.sm]}>
+          <Ionicons name="location" size={20} color={palette.green600} />
+          <View style={{ marginLeft: 12, flex: 1 }}>
+            <Text style={{ fontSize: 13.5, fontWeight: '800', color: palette.ink, marginBottom: 3 }}>Delivery Address</Text>
+            <Text style={{ fontSize: 13.5, color: palette.slate500, lineHeight: 20 }}>{order.deliveryAddress.street}, {order.deliveryAddress.city}, {order.deliveryAddress.state} - {order.deliveryAddress.pincode}</Text>
           </View>
         </View>
+
+        {/* Payment summary */}
+        <View style={[{ backgroundColor: palette.white, borderRadius: radii.lg, padding: 16, marginTop: 12 }, shadows.sm]}>
+          <SumRow label="Subtotal" value={`₹${order.subtotal}`} />
+          <SumRow label="Delivery Fee" value={`₹${order.deliveryFee}`} />
+          <Divider style={{ marginVertical: 10 }} />
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+            <Text style={{ fontSize: 16, fontWeight: '900', color: palette.ink }}>Total</Text>
+            <Text style={{ fontSize: 17, fontWeight: '900', color: palette.green700 }}>₹{order.total}</Text>
+          </View>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 12 }}>
+            <Text style={{ fontSize: 13, color: palette.slate400 }}>Payment</Text>
+            <Text style={{ fontSize: 13, fontWeight: '800', color: palette.slate600, textTransform: 'uppercase' }}>{order.paymentMethod}</Text>
+          </View>
+        </View>
+
+        {!isDelivered && !isCancelled && canCancelOrder(order.orderStatus) ? (
+          <View style={{ marginTop: 18 }}>
+            <Button label="Cancel Order" variant="danger" icon="close-circle-outline" loading={cancelling} onPress={handleCancelOrder} />
+          </View>
+        ) : null}
       </ScrollView>
+    </View>
+  );
+}
 
-      {/* Contact Support / Cancel Order */}
-      {!isDelivered && !isCancelled && (
-        <View className="px-6 py-4 border-t border-gray-200">
-          {canCancelOrder(order.orderStatus) && (
-            <TouchableOpacity
-              onPress={handleCancelOrder}
-              disabled={cancelling}
-              className={`bg-red-50 rounded-xl py-4 items-center mb-3 ${
-                cancelling ? 'opacity-50' : ''
-              }`}
-            >
-              {cancelling ? (
-                <ActivityIndicator color="#ef4444" />
-              ) : (
-                <Text className="text-red-600 font-semibold text-base">
-                  Cancel Order
-                </Text>
-              )}
-            </TouchableOpacity>
-          )}
-          <TouchableOpacity
-            onPress={() => Alert.alert('Support', 'Contact customer support at support@farmergroceries.com')}
-            className="bg-gray-100 rounded-xl py-4 items-center"
-          >
-            <Text className="text-gray-900 font-semibold text-base">
-              Need Help? Contact Support
-            </Text>
-          </TouchableOpacity>
-        </View>
-      )}
+function SumRow({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+      <Text style={{ fontSize: 14, color: palette.slate500 }}>{label}</Text>
+      <Text style={{ fontSize: 14, fontWeight: '700', color: palette.ink }}>{value}</Text>
     </View>
   );
 }
