@@ -1,345 +1,147 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  Alert,
-  ActivityIndicator,
-  TextInput,
-  KeyboardAvoidingView,
-  Platform,
-} from 'react-native';
+import { View, Text, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
-import { MotiView } from 'moti';
+import { Ionicons } from '@expo/vector-icons';
 import { useCart } from '../../src/contexts/CartContext';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { SupabaseService } from '../../src/services/supabase';
-import { DELIVERY_FEE, FREE_DELIVERY_THRESHOLD, MIN_ORDER_VALUE, SUCCESS_MESSAGES, PAYMENT_METHODS } from '../../src/constants';
+import { DELIVERY_FEE, FREE_DELIVERY_THRESHOLD, MIN_ORDER_VALUE, SUCCESS_MESSAGES } from '../../src/constants';
 import { formatCurrency, validatePincode } from '../../src/utils/helpers';
+import { Button, Input, IconButton, PressableScale, useToast, Divider } from '../../src/components/ui';
+import { palette, radii, shadows } from '../../src/theme';
 
-type PaymentMethod = typeof PAYMENT_METHODS[number]['id'];
-
-interface PaymentOption {
-  id: PaymentMethod;
-  name: string;
-  icon: string;
-  description: string;
-}
-
-const paymentOptions: PaymentOption[] = [
-  {
-    id: 'cod',
-    name: 'Cash on Delivery',
-    icon: '💵',
-    description: 'Pay when you receive',
-  },
-  {
-    id: 'upi',
-    name: 'UPI',
-    icon: '📱',
-    description: 'Pay using any UPI app',
-  },
-  {
-    id: 'card',
-    name: 'Card',
-    icon: '💳',
-    description: 'Pay using debit or credit card',
-  },
+type PaymentMethod = 'cod' | 'upi' | 'card';
+const paymentOptions: { id: PaymentMethod; name: string; emoji: string; description: string }[] = [
+  { id: 'cod', name: 'Cash on Delivery', emoji: '💵', description: 'Pay when you receive' },
+  { id: 'upi', name: 'UPI', emoji: '📱', description: 'GPay, PhonePe, Paytm & more' },
+  { id: 'card', name: 'Credit / Debit Card', emoji: '💳', description: 'Visa, Mastercard, RuPay' },
 ];
 
 export default function PaymentScreen() {
   const router = useRouter();
   const { cart, clearCart, cartTotal } = useCart();
   const { user } = useAuth();
+  const toast = useToast();
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>('cod');
   const [loading, setLoading] = useState(false);
-  
-  // Address state
-  const [address, setAddress] = useState({
-    street: '',
-    city: '',
-    state: '',
-    pincode: '',
-  });
+  const [address, setAddress] = useState({ street: '', city: '', state: '', pincode: '' });
 
   const deliveryFee = cartTotal >= FREE_DELIVERY_THRESHOLD ? 0 : DELIVERY_FEE;
   const total = cartTotal + deliveryFee;
 
   const handlePlaceOrder = async () => {
-    if (!user) {
-      Alert.alert('Error', 'Please login to place an order');
-      router.replace('/(auth)/login');
-      return;
-    }
-
-    if (cart.length === 0) {
-      Alert.alert('Empty Cart', 'Please add items to cart');
-      router.back();
-      return;
-    }
-
-    if (cartTotal < MIN_ORDER_VALUE) {
-      Alert.alert(
-        'Minimum Order',
-        `Orders must be at least ${formatCurrency(MIN_ORDER_VALUE)}. Add ${formatCurrency(MIN_ORDER_VALUE - cartTotal)} more to continue.`
-      );
-      return;
-    }
-
-    // Validate address
-    if (!address.street || !address.city || !address.state || !address.pincode) {
-      Alert.alert('Address Required', 'Please fill in all address fields');
-      return;
-    }
-
-    if (!validatePincode(address.pincode)) {
-      Alert.alert('Invalid Pincode', 'Please enter a valid 6-digit Indian pincode');
-      return;
-    }
+    if (!user) { toast.show('Please login to place an order', 'error'); return router.replace('/(auth)/login'); }
+    if (cart.length === 0) { toast.show('Your cart is empty', 'error'); return router.back(); }
+    if (cartTotal < MIN_ORDER_VALUE) return toast.show(`Add ${formatCurrency(MIN_ORDER_VALUE - cartTotal)} more to continue`, 'error');
+    if (!address.street || !address.city || !address.state || !address.pincode) return toast.show('Please fill in all address fields', 'error');
+    if (!validatePincode(address.pincode)) return toast.show('Enter a valid 6-digit pincode', 'error');
 
     setLoading(true);
     try {
-      // Group items by farmer
       const ordersByFarmer = cart.reduce((acc, item) => {
-        if (!acc[item.farmerId]) {
-          acc[item.farmerId] = [];
-        }
-        acc[item.farmerId].push(item);
+        (acc[item.farmerId] = acc[item.farmerId] || []).push(item);
         return acc;
       }, {} as Record<string, typeof cart>);
 
-      // Create separate orders for each farmer
       const orderPromises = Object.entries(ordersByFarmer).map(([farmerId, items]) => {
-        const subtotal = items.reduce(
-          (sum, item) => sum + item.product.pricePerUnit * item.quantity,
-          0
-        );
-
+        const subtotal = items.reduce((sum, item) => sum + item.product.pricePerUnit * item.quantity, 0);
         return SupabaseService.createOrder({
           orderNumber: `ORD${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-          customerId: user.id,
-          customerName: user.name || 'Customer',
-          farmerId,
-          farmerName: items[0].product.farmerName,
-          items: items.map(item => ({
-            productId: item.productId,
-            productName: item.product.name,
-            productImage: item.product.images[0] || '',
-            quantity: item.quantity,
-            unit: item.product.unit,
-            pricePerUnit: item.product.pricePerUnit,
+          customerId: user.id, customerName: user.name || 'Customer', farmerId, farmerName: items[0].product.farmerName,
+          items: items.map((item) => ({
+            productId: item.productId, productName: item.product.name, productImage: item.product.images[0] || '',
+            quantity: item.quantity, unit: item.product.unit, pricePerUnit: item.product.pricePerUnit,
             total: item.product.pricePerUnit * item.quantity,
           })),
-          subtotal,
-          deliveryFee,
-          total: subtotal + deliveryFee,
-          deliveryAddress: {
-            id: 'default',
-            label: 'Home',
-            street: address.street,
-            city: address.city,
-            state: address.state,
-            pincode: address.pincode,
-            latitude: 0,
-            longitude: 0,
-            isDefault: true,
-          },
-          paymentMethod: selectedMethod,
-          paymentStatus: selectedMethod === 'cod' ? 'pending' : 'paid',
-          orderStatus: 'placed',
-          statusHistory: [
-            {
-              status: 'placed',
-              timestamp: new Date(),
-            },
-          ],
+          subtotal, deliveryFee, total: subtotal + deliveryFee,
+          deliveryAddress: { id: 'default', label: 'Home', street: address.street, city: address.city, state: address.state, pincode: address.pincode, latitude: 0, longitude: 0, isDefault: true },
+          paymentMethod: selectedMethod, paymentStatus: selectedMethod === 'cod' ? 'pending' : 'paid',
+          orderStatus: 'placed', statusHistory: [{ status: 'placed', timestamp: new Date() }],
         });
       });
 
       await Promise.all(orderPromises);
-
       clearCart();
-      
-      Alert.alert(
-        SUCCESS_MESSAGES.orderPlaced,
-        `Your order has been placed with ${selectedMethod === 'cod' ? 'Cash on Delivery' : selectedMethod.toUpperCase()} payment method.`,
-        [
-          {
-            text: 'View Orders',
-            onPress: () => router.replace('/(customer)/orders'),
-          },
-          {
-            text: 'Continue Shopping',
-            onPress: () => router.replace('/(customer)/home'),
-          },
-        ]
-      );
-    } catch (error) {
-      console.error('Error placing order:', error);
-
-      Alert.alert(
-        'Order Failed',
-        'We could not place your order. Please check your connection and try again.'
-      );
+      toast.show(SUCCESS_MESSAGES.orderPlaced + ' 🎉', 'success');
+      setTimeout(() => router.replace('/(customer)/orders'), 700);
+    } catch {
+      toast.show('Could not place order. Try again.', 'error');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      className="flex-1 bg-white"
-    >
-      {/* Header */}
-      <View className="px-6 pt-14 pb-4 border-b border-gray-200 flex-row items-center">
-        <TouchableOpacity onPress={() => router.back()} className="mr-4">
-          <Text className="text-2xl">←</Text>
-        </TouchableOpacity>
-        <Text className="text-2xl font-bold text-gray-900">Select Payment Method</Text>
+    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1, backgroundColor: palette.slate50 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', paddingTop: 52, paddingHorizontal: 18, paddingBottom: 14 }}>
+        <IconButton icon="arrow-back" onPress={() => router.back()} />
+        <Text style={{ fontSize: 21, fontWeight: '900', color: palette.ink, marginLeft: 14 }}>Checkout</Text>
       </View>
 
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-        <View className="px-6 py-6">
-          {/* Order Summary */}
-          <View className="bg-primary-50 rounded-xl p-4 mb-6">
-            <Text className="text-base font-semibold text-gray-900 mb-2">
-              Order Summary
-            </Text>
-            <View className="flex-row justify-between mb-1">
-              <Text className="text-gray-600">Subtotal</Text>
-              <Text className="text-gray-900 font-semibold">{formatCurrency(cartTotal)}</Text>
-            </View>
-            <View className="flex-row justify-between mb-1">
-              <Text className="text-gray-600">Delivery Fee</Text>
-              <Text className={`font-semibold ${deliveryFee === 0 ? 'text-green-600' : 'text-gray-900'}`}>
-                {deliveryFee === 0 ? 'FREE' : formatCurrency(deliveryFee)}
-              </Text>
-            </View>
-            <View className="border-t border-primary-200 my-2" />
-            <View className="flex-row justify-between">
-              <Text className="text-lg font-bold text-gray-900">Total</Text>
-              <Text className="text-lg font-bold text-primary-600">{formatCurrency(total)}</Text>
-            </View>
+      <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 18, paddingBottom: 24 }}>
+        {/* Order summary */}
+        <View style={[{ backgroundColor: palette.white, borderRadius: radii.lg, padding: 18, marginBottom: 20 }, shadows.sm]}>
+          <Text style={{ fontSize: 16, fontWeight: '800', color: palette.ink, marginBottom: 14 }}>Order Summary</Text>
+          <Row label="Subtotal" value={formatCurrency(cartTotal)} />
+          <Row label="Delivery Fee" value={deliveryFee === 0 ? 'FREE' : formatCurrency(deliveryFee)} valueColor={deliveryFee === 0 ? palette.green600 : palette.ink} />
+          <Divider style={{ marginVertical: 12 }} />
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+            <Text style={{ fontSize: 17, fontWeight: '900', color: palette.ink }}>Total</Text>
+            <Text style={{ fontSize: 19, fontWeight: '900', color: palette.green700 }}>{formatCurrency(total)}</Text>
           </View>
+        </View>
 
-          {/* Payment Methods */}
-          <Text className="text-lg font-bold text-gray-900 mb-4">
-            Choose Payment Method
-          </Text>
-
-          {paymentOptions.map((option, index) => (
-            <MotiView
-              key={option.id}
-              from={{ opacity: 0, translateX: -20 }}
-              animate={{ opacity: 1, translateX: 0 }}
-              transition={{ type: 'timing', duration: 300, delay: index * 100 }}
-            >
-              <TouchableOpacity
-                onPress={() => setSelectedMethod(option.id)}
-                className={`border-2 rounded-xl p-4 mb-3 ${
-                  selectedMethod === option.id
-                    ? 'border-primary-600 bg-primary-50'
-                    : 'border-gray-200 bg-white'
-                }`}
-              >
-                <View className="flex-row items-center">
-                  <View className="w-12 h-12 bg-gray-100 rounded-lg items-center justify-center mr-3">
-                    <Text className="text-2xl">{option.icon}</Text>
-                  </View>
-                  <View className="flex-1">
-                    <Text className="text-base font-semibold text-gray-900 mb-1">
-                      {option.name}
-                    </Text>
-                    <Text className="text-sm text-gray-600">
-                      {option.description}
-                    </Text>
-                  </View>
-                  {selectedMethod === option.id && (
-                    <View className="w-6 h-6 bg-primary-600 rounded-full items-center justify-center">
-                      <Text className="text-white text-xs">✓</Text>
-                    </View>
-                  )}
+        {/* Payment methods */}
+        <Text style={{ fontSize: 16, fontWeight: '800', color: palette.ink, marginBottom: 12 }}>Payment Method</Text>
+        {paymentOptions.map((option) => {
+          const active = selectedMethod === option.id;
+          return (
+            <PressableScale key={option.id} onPress={() => setSelectedMethod(option.id)} scaleTo={0.98} style={{ marginBottom: 12 }}>
+              <View style={[{ flexDirection: 'row', alignItems: 'center', backgroundColor: palette.white, borderRadius: radii.lg, padding: 14, borderWidth: 2, borderColor: active ? palette.green500 : 'transparent' }, active ? shadows.md : shadows.sm]}>
+                <View style={{ width: 46, height: 46, borderRadius: 14, backgroundColor: palette.slate50, alignItems: 'center', justifyContent: 'center' }}>
+                  <Text style={{ fontSize: 24 }}>{option.emoji}</Text>
                 </View>
-              </TouchableOpacity>
-            </MotiView>
-          ))}
+                <View style={{ flex: 1, marginLeft: 14 }}>
+                  <Text style={{ fontSize: 15, fontWeight: '800', color: palette.ink }}>{option.name}</Text>
+                  <Text style={{ fontSize: 12.5, color: palette.slate400, marginTop: 2 }}>{option.description}</Text>
+                </View>
+                <View style={{ width: 24, height: 24, borderRadius: 12, borderWidth: 2, borderColor: active ? palette.green600 : palette.slate200, backgroundColor: active ? palette.green600 : 'transparent', alignItems: 'center', justifyContent: 'center' }}>
+                  {active ? <Ionicons name="checkmark" size={15} color={palette.white} /> : null}
+                </View>
+              </View>
+            </PressableScale>
+          );
+        })}
 
-          {/* Delivery Address */}
-          <View className="mt-4 bg-white rounded-xl border-2 border-gray-200 p-4">
-            <Text className="text-base font-semibold text-gray-900 mb-3">
-              📍 Delivery Address
-            </Text>
-            
-            <TextInput
-              placeholder="Street Address *"
-              value={address.street}
-              onChangeText={(text) => setAddress({ ...address, street: text })}
-              className="bg-gray-50 rounded-lg px-4 py-3 mb-3 text-gray-900"
-              placeholderTextColor="#9CA3AF"
-            />
-            
-            <TextInput
-              placeholder="City *"
-              value={address.city}
-              onChangeText={(text) => setAddress({ ...address, city: text })}
-              className="bg-gray-50 rounded-lg px-4 py-3 mb-3 text-gray-900"
-              placeholderTextColor="#9CA3AF"
-            />
-            
-            <View className="flex-row gap-3">
-              <TextInput
-                placeholder="State *"
-                value={address.state}
-                onChangeText={(text) => setAddress({ ...address, state: text })}
-                className="bg-gray-50 rounded-lg px-4 py-3 flex-1 text-gray-900"
-                placeholderTextColor="#9CA3AF"
-              />
-              
-              <TextInput
-                placeholder="Pincode *"
-                value={address.pincode}
-                onChangeText={(text) => setAddress({ ...address, pincode: text })}
-                keyboardType="numeric"
-                maxLength={6}
-                className="bg-gray-50 rounded-lg px-4 py-3 w-28 text-gray-900"
-                placeholderTextColor="#9CA3AF"
-              />
+        {/* Delivery address */}
+        <Text style={{ fontSize: 16, fontWeight: '800', color: palette.ink, marginTop: 12, marginBottom: 12 }}>📍 Delivery Address</Text>
+        <View style={[{ backgroundColor: palette.white, borderRadius: radii.lg, padding: 16 }, shadows.sm]}>
+          <Input label="Street Address" icon="home-outline" placeholder="House no, street, area" value={address.street} onChangeText={(t) => setAddress({ ...address, street: t })} />
+          <Input label="City" icon="business-outline" placeholder="City" value={address.city} onChangeText={(t) => setAddress({ ...address, city: t })} />
+          <View style={{ flexDirection: 'row', gap: 12 }}>
+            <View style={{ flex: 1.4 }}>
+              <Input label="State" placeholder="State" value={address.state} onChangeText={(t) => setAddress({ ...address, state: t })} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Input label="Pincode" placeholder="6 digits" keyboardType="numeric" maxLength={6} value={address.pincode} onChangeText={(t) => setAddress({ ...address, pincode: t })} />
             </View>
           </View>
         </View>
       </ScrollView>
 
-      {/* Place Order Button */}
-      <View className="px-6 py-4 border-t border-gray-200 bg-white">
-        <TouchableOpacity
-          onPress={handlePlaceOrder}
-          disabled={loading}
-          className={`bg-primary-600 rounded-xl py-4 items-center ${
-            loading ? 'opacity-50' : ''
-          }`}
-        >
-          {loading ? (
-            <ActivityIndicator color="white" />
-          ) : (
-            <Text className="text-white text-base font-semibold">
-              Place Order - {formatCurrency(total)}
-            </Text>
-          )}
-        </TouchableOpacity>
-
-        {selectedMethod === 'upi' && (
-          <Text className="text-center text-xs text-gray-500 mt-2">
-            You will be redirected to your UPI app to complete payment
-          </Text>
-        )}
-        {selectedMethod === 'card' && (
-          <Text className="text-center text-xs text-gray-500 mt-2">
-            You will be redirected to a secure page to complete payment
-          </Text>
-        )}
+      {/* Place order */}
+      <View style={[{ backgroundColor: palette.white, paddingHorizontal: 18, paddingTop: 14, paddingBottom: 26, borderTopLeftRadius: 24, borderTopRightRadius: 24 }, shadows.lg]}>
+        <Button label={`Place Order · ${formatCurrency(total)}`} icon="bag-check" loading={loading} onPress={handlePlaceOrder} size="lg" />
       </View>
     </KeyboardAvoidingView>
+  );
+}
+
+function Row({ label, value, valueColor = palette.ink }: { label: string; value: string; valueColor?: string }) {
+  return (
+    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+      <Text style={{ fontSize: 14, color: palette.slate500 }}>{label}</Text>
+      <Text style={{ fontSize: 14, fontWeight: '700', color: valueColor }}>{value}</Text>
+    </View>
   );
 }
