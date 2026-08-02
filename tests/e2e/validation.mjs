@@ -124,6 +124,12 @@ try {
   t.check('TC-V15', 'Product creation rejected with mandatory fields empty',
     await says('fill all required fields'));
   await settle();
+
+  // Note: the product screen cancels its pending add-to-cart navigation on blur.
+  // That guard is deliberately not asserted here — on the web target expo-router
+  // ignores a back() issued after the screen has been left, so the same scenario
+  // passes with and without the guard and the assertion would have no value. The
+  // hazard it removes is real on the native stack navigator.
 } catch (error) {
   console.error('\nSUITE ABORTED:', error.message);
   t.check('SUITE', 'Suite ran to completion', false);

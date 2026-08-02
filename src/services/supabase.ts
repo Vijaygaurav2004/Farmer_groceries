@@ -364,6 +364,8 @@ export class SupabaseService {
       harvestDate: new Date(data.harvest_date),
       isOrganic: data.is_organic,
       isAvailable: data.is_available,
+      rating: data.rating ?? undefined,
+      totalReviews: data.total_reviews ?? undefined,
       createdAt: new Date(data.created_at),
       updatedAt: new Date(data.updated_at),
     } as Product;
@@ -397,6 +399,8 @@ export class SupabaseService {
       harvestDate: new Date(item.harvest_date),
       isOrganic: item.is_organic,
       isAvailable: item.is_available,
+      rating: item.rating ?? undefined,
+      totalReviews: item.total_reviews ?? undefined,
       createdAt: new Date(item.created_at),
       updatedAt: new Date(item.updated_at),
     }));
@@ -430,6 +434,8 @@ export class SupabaseService {
       harvestDate: new Date(item.harvest_date),
       isOrganic: item.is_organic,
       isAvailable: item.is_available,
+      rating: item.rating ?? undefined,
+      totalReviews: item.total_reviews ?? undefined,
       createdAt: new Date(item.created_at),
       updatedAt: new Date(item.updated_at),
     }));
@@ -464,6 +470,8 @@ export class SupabaseService {
       harvestDate: new Date(item.harvest_date),
       isOrganic: item.is_organic,
       isAvailable: item.is_available,
+      rating: item.rating ?? undefined,
+      totalReviews: item.total_reviews ?? undefined,
       createdAt: new Date(item.created_at),
       updatedAt: new Date(item.updated_at),
     }));
@@ -491,6 +499,8 @@ export class SupabaseService {
     if (data.harvestDate) updateData.harvest_date = data.harvestDate.toISOString();
     if (data.isOrganic !== undefined) updateData.is_organic = data.isOrganic;
     if (data.isAvailable !== undefined) updateData.is_available = data.isAvailable;
+    if (data.rating !== undefined) updateData.rating = data.rating;
+    if (data.totalReviews !== undefined) updateData.total_reviews = data.totalReviews;
     
     const { error } = await supabase
       .from('products')

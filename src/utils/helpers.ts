@@ -4,6 +4,13 @@ export const formatCurrency = (amount: number): string => {
   return `₹${amount.toLocaleString('en-IN')}`;
 };
 
+/** Currency abbreviated for narrow surfaces: ₹940 · ₹2.4k · ₹1.2L */
+export const formatCompactCurrency = (amount: number): string => {
+  if (amount >= 100000) return `₹${(amount / 100000).toFixed(1)}L`;
+  if (amount >= 1000) return `₹${(amount / 1000).toFixed(1)}k`;
+  return `₹${Math.round(amount)}`;
+};
+
 export const formatDate = (date: Date | string): string => {
   const dateObj = typeof date === 'string' ? new Date(date) : date;
   return dateObj.toLocaleDateString('en-IN', {

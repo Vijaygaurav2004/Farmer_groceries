@@ -91,16 +91,16 @@ function makeProduct(
 }
 
 const PRODUCTS: Product[] = [
-  makeProduct('p1', FARMERS[0], { name: 'Fresh Tomatoes', description: 'Juicy vine-ripened tomatoes, picked this morning.', category: 'vegetables', unit: 'kg', pricePerUnit: 40, stock: 50 }),
-  makeProduct('p2', FARMERS[0], { name: 'Baby Spinach', description: 'Tender pesticide-free spinach leaves.', category: 'vegetables', unit: 'kg', pricePerUnit: 60, stock: 25 }),
-  makeProduct('p3', FARMERS[0], { name: 'Potatoes', description: 'Farm-fresh potatoes, great for every kitchen.', category: 'vegetables', unit: 'kg', pricePerUnit: 30, stock: 100, isOrganic: false }),
-  makeProduct('p4', FARMERS[0], { name: 'Fresh Coriander', description: 'Aromatic coriander bunches.', category: 'herbs', unit: 'piece', pricePerUnit: 15, stock: 40 }),
-  makeProduct('p5', FARMERS[1], { name: 'Alphonso Mangoes', description: 'The king of mangoes, from Ratnagiri orchards.', category: 'fruits', unit: 'dozen', pricePerUnit: 650, stock: 20 }),
-  makeProduct('p6', FARMERS[1], { name: 'Bananas', description: 'Naturally ripened Robusta bananas.', category: 'fruits', unit: 'dozen', pricePerUnit: 55, stock: 60 }),
-  makeProduct('p7', FARMERS[1], { name: 'Raw Forest Honey', description: 'Unprocessed honey from forest hives.', category: 'honey', unit: 'liter', pricePerUnit: 480, stock: 15 }),
-  makeProduct('p8', FARMERS[2], { name: 'Cow Milk', description: 'Fresh whole milk, delivered chilled.', category: 'dairy', unit: 'liter', pricePerUnit: 65, stock: 30 }),
-  makeProduct('p9', FARMERS[2], { name: 'Basmati Rice', description: 'Aged long-grain basmati rice.', category: 'grains', unit: 'kg', pricePerUnit: 120, stock: 80, isOrganic: false }),
-  makeProduct('p10', FARMERS[2], { name: 'Free-Range Eggs', description: 'Eggs from free-range desi hens.', category: 'eggs', unit: 'dozen', pricePerUnit: 90, stock: 35 }),
+  makeProduct('p1', FARMERS[0], { name: 'Fresh Tomatoes', description: 'Juicy vine-ripened tomatoes, picked this morning.', category: 'vegetables', unit: 'kg', pricePerUnit: 40, stock: 50, rating: 4.6, totalReviews: 214 }),
+  makeProduct('p2', FARMERS[0], { name: 'Baby Spinach', description: 'Tender pesticide-free spinach leaves.', category: 'vegetables', unit: 'kg', pricePerUnit: 60, stock: 25, rating: 4.4, totalReviews: 96 }),
+  makeProduct('p3', FARMERS[0], { name: 'Potatoes', description: 'Farm-fresh potatoes, great for every kitchen.', category: 'vegetables', unit: 'kg', pricePerUnit: 30, stock: 100, isOrganic: false, rating: 4.2, totalReviews: 331 }),
+  makeProduct('p4', FARMERS[0], { name: 'Fresh Coriander', description: 'Aromatic coriander bunches.', category: 'herbs', unit: 'piece', pricePerUnit: 15, stock: 40, rating: 4.7, totalReviews: 58 }),
+  makeProduct('p5', FARMERS[1], { name: 'Alphonso Mangoes', description: 'The king of mangoes, from Ratnagiri orchards.', category: 'fruits', unit: 'dozen', pricePerUnit: 650, stock: 20, rating: 4.9, totalReviews: 402 }),
+  makeProduct('p6', FARMERS[1], { name: 'Bananas', description: 'Naturally ripened Robusta bananas.', category: 'fruits', unit: 'dozen', pricePerUnit: 55, stock: 60, rating: 4.3, totalReviews: 173 }),
+  makeProduct('p7', FARMERS[1], { name: 'Raw Forest Honey', description: 'Unprocessed honey from forest hives.', category: 'honey', unit: 'liter', pricePerUnit: 480, stock: 15, rating: 4.8, totalReviews: 61 }),
+  makeProduct('p8', FARMERS[2], { name: 'Cow Milk', description: 'Fresh whole milk, delivered chilled.', category: 'dairy', unit: 'liter', pricePerUnit: 65, stock: 30, rating: 4.5, totalReviews: 288 }),
+  makeProduct('p9', FARMERS[2], { name: 'Basmati Rice', description: 'Aged long-grain basmati rice.', category: 'grains', unit: 'kg', pricePerUnit: 120, stock: 80, isOrganic: false, rating: 4.1, totalReviews: 124 }),
+  makeProduct('p10', FARMERS[2], { name: 'Free-Range Eggs', description: 'Eggs from free-range desi hens.', category: 'eggs', unit: 'dozen', pricePerUnit: 90, stock: 35, rating: 4.7, totalReviews: 149 }),
 ];
 
 function makeOrder(

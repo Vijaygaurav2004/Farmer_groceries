@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { View, Text, ScrollView, Alert, Modal } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { SupabaseService } from '../../src/services/supabase';
+import { Order } from '../../src/types';
 import { APP_CONFIG, SUCCESS_MESSAGES } from '../../src/constants';
-import { validatePhone } from '../../src/utils/helpers';
+import { formatCompactCurrency, validatePhone } from '../../src/utils/helpers';
 import { Button, Input, PressableScale, useToast, FadeInUp, Divider } from '../../src/components/ui';
 import { palette, radii, shadows, gradients } from '../../src/theme';
 
@@ -20,6 +21,27 @@ export default function ProfileScreen() {
   const [name, setName] = useState(user?.name || '');
   const [phone, setPhone] = useState(user?.phoneNumber || '');
   const [saving, setSaving] = useState(false);
+  const [orders, setOrders] = useState<Order[]>([]);
+
+  // Reload on focus so the header reflects orders placed earlier in the session.
+  useFocusEffect(
+    useCallback(() => {
+      if (!user) return;
+      let cancelled = false;
+      SupabaseService.getCustomerOrders(user.id)
+        .then((data) => { if (!cancelled) setOrders(data); })
+        .catch((error) => console.error('Profile: failed to load orders', error));
+      return () => { cancelled = true; };
+    }, [user])
+  );
+
+  const deliveredOrders = orders.filter((o) => o.orderStatus === 'delivered');
+  const stats = [
+    { label: 'Orders', value: `${orders.length}`, color: palette.green700 },
+    { label: 'Delivered', value: `${deliveredOrders.length}`, color: palette.coral },
+    { label: 'Spent', value: formatCompactCurrency(deliveredOrders.reduce((sum, o) => sum + o.total, 0)),
+      color: palette.amber600 },
+  ];
 
   const handleSignOut = () => {
     Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
@@ -80,18 +102,23 @@ export default function ProfileScreen() {
 
         {/* Stats */}
         <FadeInUp style={{ flexDirection: 'row', marginHorizontal: 18, marginTop: -22 } as any}>
-          <View style={[{ flex: 1, backgroundColor: palette.white, borderRadius: radii.lg, paddingVertical: 16, alignItems: 'center', marginRight: 6 }, shadows.md]}>
-            <Text style={{ fontSize: 20, fontWeight: '900', color: palette.green700 }}>12</Text>
-            <Text style={{ fontSize: 11.5, color: palette.slate400, marginTop: 2 }}>Orders</Text>
-          </View>
-          <View style={[{ flex: 1, backgroundColor: palette.white, borderRadius: radii.lg, paddingVertical: 16, alignItems: 'center', marginHorizontal: 6 }, shadows.md]}>
-            <Text style={{ fontSize: 20, fontWeight: '900', color: palette.coral }}>8</Text>
-            <Text style={{ fontSize: 11.5, color: palette.slate400, marginTop: 2 }}>Favorites</Text>
-          </View>
-          <View style={[{ flex: 1, backgroundColor: palette.white, borderRadius: radii.lg, paddingVertical: 16, alignItems: 'center', marginLeft: 6 }, shadows.md]}>
-            <Text style={{ fontSize: 20, fontWeight: '900', color: palette.amber600 }}>₹2.4k</Text>
-            <Text style={{ fontSize: 11.5, color: palette.slate400, marginTop: 2 }}>Saved</Text>
-          </View>
+          {stats.map((s, i) => (
+            <View
+              key={s.label}
+              style={[
+                {
+                  flex: 1, backgroundColor: palette.white, borderRadius: radii.lg,
+                  paddingVertical: 16, alignItems: 'center',
+                  marginRight: i < stats.length - 1 ? 6 : 0,
+                  marginLeft: i > 0 ? 6 : 0,
+                },
+                shadows.md,
+              ]}
+            >
+              <Text style={{ fontSize: 20, fontWeight: '900', color: s.color }}>{s.value}</Text>
+              <Text style={{ fontSize: 11.5, color: palette.slate400, marginTop: 2 }}>{s.label}</Text>
+            </View>
+          ))}
         </FadeInUp>
 
         {/* Menu */}

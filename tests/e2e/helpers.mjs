@@ -67,7 +67,7 @@ export async function press(page, text, opts = {}) {
     if (required) throw new Error(`press: no control labelled "${text}" [index ${index}]`);
     return false;
   }
-  await sleep(wait);
+  if (wait > 0) await sleep(wait);
   return true;
 }
 

@@ -69,11 +69,15 @@ export interface Product {
   harvestDate: Date;
   isOrganic: boolean;
   isAvailable: boolean;
+  /** Mean customer rating, 1-5. Undefined until the product has been reviewed. */
+  rating?: number;
+  /** Number of reviews behind `rating`. Undefined or 0 means "not yet rated". */
+  totalReviews?: number;
   createdAt: Date;
   updatedAt: Date;
 }
 
-export type ProductCategory = 
+export type ProductCategory =
   | 'vegetables'
   | 'fruits'
   | 'dairy'

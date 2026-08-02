@@ -74,6 +74,9 @@ try {
   await press(page, 'Alphonso Mangoes', { wait: 2800 });
   t.check('TC-F07', 'Product detail opens with stock and pricing',
     (await has('in stock')) && (await has('₹650')));
+  // the rating must be this product's own, not a constant shared by every item
+  t.check('TC-F07b', 'Product detail shows the product’s own rating',
+    (await has('4.9')) && (await has('(402)')));
   await shot('07-product-detail');
 
   await press(page, 'Add · ₹650', { exact: false, index: -1, wait: 2500 });
@@ -117,6 +120,12 @@ try {
   await press(page, 'Profile', { wait: 2200 });
   t.check('TC-F15', 'Customer profile presents identity and actions',
     (await has('aarav@example.com')) && (await has('Sign Out')));
+  // header counters must be derived from the account, not fixed placeholders.
+  // Asserted on the labels and the absence of the old constants: sibling tab
+  // screens stay mounted, so a bare amount could leak in from another tab.
+  t.check('TC-F15b', 'Profile header reports real order statistics',
+    (await has('Orders')) && (await has('Delivered')) && (await has('Spent'))
+    && !(await has('₹2.4k')) && !(await has('Favorites')));
   await shot('12-customer-profile');
 
   // ---------------- farmer ----------------

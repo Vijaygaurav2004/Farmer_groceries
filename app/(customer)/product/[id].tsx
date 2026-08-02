@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, ScrollView, ActivityIndicator } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { SupabaseService } from '../../../src/services/supabase';
@@ -19,8 +19,22 @@ export default function ProductDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
   const [fav, setFav] = useState(false);
+  const backTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => { loadProduct(); }, [id]);
+
+  // The add-to-cart confirmation pops this screen after a short delay. If the
+  // user leaves first, that pending pop must not fire. Cancel on blur rather
+  // than on unmount: this screen sits in a tab navigator, so navigating away
+  // blurs it without necessarily unmounting it.
+  useFocusEffect(
+    useCallback(() => () => {
+      if (backTimer.current) {
+        clearTimeout(backTimer.current);
+        backTimer.current = null;
+      }
+    }, [])
+  );
 
   const loadProduct = async () => {
     try { setLoading(true); setProduct(await SupabaseService.getProduct(id)); }
@@ -32,7 +46,11 @@ export default function ProductDetailScreen() {
     if (!product) return;
     addToCart(product, quantity);
     toast.show(`${quantity} × ${product.name} added 🛒`, 'success');
-    setTimeout(() => router.back(), 500);
+    if (backTimer.current) clearTimeout(backTimer.current);
+    backTimer.current = setTimeout(() => {
+      backTimer.current = null;
+      router.back();
+    }, 500);
   };
 
   if (loading) {
@@ -76,8 +94,13 @@ export default function ProductDetailScreen() {
               <Text style={{ fontSize: 25, fontWeight: '900', color: palette.ink, letterSpacing: -0.5 }}>{product.name}</Text>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>
                 <Text style={{ fontSize: 14, color: palette.slate500 }}>🧑‍🌾 {product.farmerName}</Text>
-                <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: palette.slate300, marginHorizontal: 8 }} />
-                <Rating value={4.7} reviews={92} />
+                {/* Only shown once the product has actually been reviewed. */}
+                {product.totalReviews && product.rating != null ? (
+                  <>
+                    <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: palette.slate300, marginHorizontal: 8 }} />
+                    <Rating value={product.rating} reviews={product.totalReviews} />
+                  </>
+                ) : null}
               </View>
             </View>
             <View style={{ alignItems: 'flex-end' }}>
