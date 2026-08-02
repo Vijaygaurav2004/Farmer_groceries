@@ -1,336 +1,173 @@
 import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  RefreshControl,
-  ActivityIndicator,
-  Alert,
-  Switch,
-} from 'react-native';
-import { MotiView } from 'moti';
+import { View, Text, ScrollView, RefreshControl, ActivityIndicator, Alert, Switch } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { SupabaseService } from '../../src/services/supabase';
 import { Order } from '../../src/types';
 import { DELIVERY_FEE, DEFAULT_COORDINATES } from '../../src/constants';
-import {
-  calculateDistance,
-  formatCurrency,
-  getEstimatedDeliveryMinutes,
-} from '../../src/utils/helpers';
-
-// No more hardcoded demo data - all orders from database
+import { calculateDistance, formatCurrency, getEstimatedDeliveryMinutes } from '../../src/utils/helpers';
+import { StatusPill, Button, PressableScale, useToast, FadeInUp, Divider } from '../../src/components/ui';
+import { palette, radii, shadows, gradients } from '../../src/theme';
 
 export default function DeliveryOrdersScreen() {
   const { user } = useAuth();
+  const toast = useToast();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [isAvailable, setIsAvailable] = useState(true);
   const [declinedOrderIds, setDeclinedOrderIds] = useState<Set<string>>(new Set());
 
-  useEffect(() => {
-    loadOrders();
-  }, []);
+  useEffect(() => { loadOrders(); }, []);
 
   const loadOrders = async () => {
     if (!user) return;
-    
-    try {
-      setLoading(true);
-      const ordersData = await SupabaseService.getDeliveryPartnerOrders(user.id);
-      setOrders(ordersData);
-    } catch (error) {
-      console.error('Error loading orders:', error);
-      setOrders([]); // Set empty array if error
-    } finally {
-      setLoading(false);
-    }
+    try { setLoading(true); setOrders(await SupabaseService.getDeliveryPartnerOrders(user.id)); }
+    catch { setOrders([]); }
+    finally { setLoading(false); }
   };
+  const handleRefresh = async () => { setRefreshing(true); await loadOrders(); setRefreshing(false); };
 
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    await loadOrders();
-    setRefreshing(false);
+  const handleAcceptOrder = (orderId: string) => {
+    Alert.alert('Accept Order', 'Accept this delivery?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Accept', onPress: async () => {
+        try {
+          await SupabaseService.updateOrderStatus(orderId, 'assigned');
+          await SupabaseService.updateOrder(orderId, { deliveryPartnerId: user?.id } as any);
+          loadOrders(); toast.show('Order accepted 🚚', 'success');
+        } catch { toast.show('Failed to accept order', 'error'); }
+      } },
+    ]);
   };
-
-  const handleAcceptOrder = async (orderId: string) => {
-    Alert.alert(
-      'Accept Order',
-      'Do you want to accept this delivery?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Accept',
-          onPress: async () => {
-            try {
-              await SupabaseService.updateOrderStatus(orderId, 'assigned');
-              // Update order with delivery partner ID
-              await SupabaseService.updateOrder(orderId, { 
-                deliveryPartnerId: user?.id 
-              } as any);
-              loadOrders();
-              Alert.alert('Success', 'Order accepted successfully');
-            } catch (error) {
-              console.error('Error accepting order:', error);
-              Alert.alert('Error', 'Failed to accept order');
-            }
-          },
-        },
-      ]
-    );
-  };
-
-  const handleDeclineOrder = (orderId: string) => {
-    setDeclinedOrderIds(prev => new Set(prev).add(orderId));
-  };
-
-  const getOrderDistanceKm = (order: Order): number | null => {
-    const { latitude, longitude } = order.deliveryAddress;
-    if (!latitude || !longitude) return null;
-
-    return calculateDistance(
-      DEFAULT_COORDINATES.latitude,
-      DEFAULT_COORDINATES.longitude,
-      latitude,
-      longitude
-    );
-  };
+  const handleDeclineOrder = (orderId: string) => { setDeclinedOrderIds((p) => new Set(p).add(orderId)); toast.show('Order declined', 'info'); };
 
   const getDistanceLabel = (order: Order): string | null => {
-    const distanceKm = getOrderDistanceKm(order);
-    if (distanceKm == null) return null;
-
-    const etaMinutes = getEstimatedDeliveryMinutes(distanceKm);
-    return `${distanceKm.toFixed(1)} km · ~${etaMinutes} mins`;
+    const { latitude, longitude } = order.deliveryAddress;
+    if (!latitude || !longitude) return null;
+    const km = calculateDistance(DEFAULT_COORDINATES.latitude, DEFAULT_COORDINATES.longitude, latitude, longitude);
+    return `${km.toFixed(1)} km · ~${getEstimatedDeliveryMinutes(km)} mins`;
   };
 
-  const handleUpdateStatus = async (orderId: string, currentStatus: string) => {
+  const handleUpdateStatus = (orderId: string, currentStatus: string) => {
     const statusMap: Record<string, { next: string; label: string }> = {
       assigned: { next: 'picked_up', label: 'Mark as Picked Up' },
       picked_up: { next: 'out_for_delivery', label: 'Start Delivery' },
       out_for_delivery: { next: 'delivered', label: 'Mark as Delivered' },
     };
-
-    const statusConfig = statusMap[currentStatus];
-    if (!statusConfig) return;
-
-    Alert.alert(
-      'Update Status',
-      statusConfig.label,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Update',
-          onPress: async () => {
-            try {
-              await SupabaseService.updateOrderStatus(orderId, statusConfig.next as any);
-              loadOrders();
-              Alert.alert('Success', 'Order status updated');
-            } catch (error) {
-              console.error('Error updating status:', error);
-              Alert.alert('Error', 'Failed to update status');
-            }
-          },
-        },
-      ]
-    );
+    const cfg = statusMap[currentStatus];
+    if (!cfg) return;
+    Alert.alert('Update Status', cfg.label + '?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Update', onPress: async () => {
+        try { await SupabaseService.updateOrderStatus(orderId, cfg.next as any); loadOrders(); toast.show('Status updated ✓', 'success'); }
+        catch { toast.show('Failed to update', 'error'); }
+      } },
+    ]);
   };
 
-  const formatDate = (date: Date) => {
-    return new Date(date).toLocaleDateString('en-IN', {
-      day: 'numeric',
-      month: 'short',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
-
-  const myOrders = orders.filter(o => o.deliveryPartnerId === user?.id);
-  const availableOrders = isAvailable
-    ? orders.filter(
-        o => !o.deliveryPartnerId && o.orderStatus === 'packed' && !declinedOrderIds.has(o.id)
-      )
-    : [];
+  const myOrders = orders.filter((o) => o.deliveryPartnerId === user?.id);
+  const availableOrders = isAvailable ? orders.filter((o) => !o.deliveryPartnerId && o.orderStatus === 'packed' && !declinedOrderIds.has(o.id)) : [];
+  const actionLabel = (s: string) => (s === 'assigned' ? 'Pick Up' : s === 'picked_up' ? 'Start Delivery' : 'Delivered');
 
   return (
-    <View className="flex-1 bg-white">
-      {/* Header */}
-      <View className="px-6 pt-14 pb-4 bg-primary-600">
-        <View className="flex-row justify-between items-center mb-4">
+    <View style={{ flex: 1, backgroundColor: palette.slate50 }}>
+      <LinearGradient colors={gradients.brand as any} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ paddingTop: 54, paddingHorizontal: 18, paddingBottom: 22, borderBottomLeftRadius: 26, borderBottomRightRadius: 26 }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
           <View>
-            <Text className="text-white text-base">Hi Delivery Partner 👋</Text>
-            <Text className="text-white text-2xl font-bold">
-              {user?.name || 'Partner'}
-            </Text>
+            <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 14, fontWeight: '600' }}>Delivery Partner 👋</Text>
+            <Text style={{ color: palette.white, fontSize: 23, fontWeight: '900' }}>{user?.name || 'Partner'}</Text>
           </View>
-          <View className="flex-row items-center bg-white/20 px-3 py-2 rounded-full">
-            <Text className="text-white mr-2">{isAvailable ? 'Online' : 'Offline'}</Text>
-            <Switch
-              value={isAvailable}
-              onValueChange={setIsAvailable}
-              trackColor={{ false: '#767577', true: '#22c55e' }}
-            />
+          <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.2)', paddingLeft: 12, paddingRight: 4, paddingVertical: 4, borderRadius: radii.pill }}>
+            <Text style={{ color: palette.white, fontWeight: '700', fontSize: 12.5, marginRight: 6 }}>{isAvailable ? 'Online' : 'Offline'}</Text>
+            <Switch value={isAvailable} onValueChange={setIsAvailable} trackColor={{ false: 'rgba(255,255,255,0.3)', true: palette.green700 }} thumbColor={palette.white} />
           </View>
         </View>
-
-        {!isAvailable && (
-          <Text className="text-primary-100 text-xs mb-3">
-            You are offline — new available orders are hidden until you go online.
-          </Text>
-        )}
-
-        {/* Stats */}
-        <View className="flex-row justify-between">
-          <View className="bg-white/20 rounded-lg px-4 py-2 flex-1 mr-2">
-            <Text className="text-white text-xs">Active Deliveries</Text>
-            <Text className="text-white text-2xl font-bold">{myOrders.length}</Text>
+        <View style={{ flexDirection: 'row', marginTop: 16 }}>
+          <View style={{ flex: 1, backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: radii.md, padding: 12, marginRight: 6 }}>
+            <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 11.5 }}>Active Deliveries</Text>
+            <Text style={{ color: palette.white, fontSize: 22, fontWeight: '900', marginTop: 2 }}>{myOrders.length}</Text>
           </View>
-          <View className="bg-white/20 rounded-lg px-4 py-2 flex-1 ml-2">
-            <Text className="text-white text-xs">Active Earnings</Text>
-            <Text className="text-white text-2xl font-bold">{formatCurrency(myOrders.length * DELIVERY_FEE)}</Text>
+          <View style={{ flex: 1, backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: radii.md, padding: 12, marginLeft: 6 }}>
+            <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 11.5 }}>Active Earnings</Text>
+            <Text style={{ color: palette.white, fontSize: 22, fontWeight: '900', marginTop: 2 }}>{formatCurrency(myOrders.length * DELIVERY_FEE)}</Text>
           </View>
         </View>
-      </View>
+      </LinearGradient>
 
       {loading ? (
-        <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color="#22c55e" />
-        </View>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}><ActivityIndicator size="large" color={palette.green600} /></View>
       ) : (
-        <ScrollView
-          className="flex-1"
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
-          }
-        >
-          {/* Available Orders */}
+        <ScrollView showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={palette.green600} />} contentContainerStyle={{ padding: 18, paddingBottom: 24 }}>
           {availableOrders.length > 0 && (
-            <View className="px-6 py-4">
-              <Text className="text-lg font-bold text-gray-900 mb-3">
-                Available Orders ({availableOrders.length})
-              </Text>
-              
-              {availableOrders.map((order, index) => (
-                <MotiView
-                  key={order.id}
-                  from={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ type: 'timing', duration: 300, delay: index * 50 }}
-                  className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4 mb-3"
-                >
-                  <View className="flex-row justify-between items-start mb-3">
-                    <View className="flex-1">
-                      <Text className="text-base font-bold text-gray-900 mb-1">
-                        {order.orderNumber}
-                      </Text>
-                      <Text className="text-sm text-gray-600">
-                        📍 {order.deliveryAddress.street}, {order.deliveryAddress.city}
-                      </Text>
-                      {getDistanceLabel(order) && (
-                        <Text className="text-xs text-gray-500 mt-1">
-                          {getDistanceLabel(order)}
-                        </Text>
-                      )}
+            <View style={{ marginBottom: 8 }}>
+              <Text style={{ fontSize: 17, fontWeight: '800', color: palette.ink, marginBottom: 12 }}>🔔 Available Orders ({availableOrders.length})</Text>
+              {availableOrders.map((order) => (
+                <FadeInUp key={order.id} style={{ backgroundColor: '#eff6ff', borderRadius: radii.lg, padding: 16, marginBottom: 12, borderWidth: 1.5, borderColor: '#bfdbfe' } as any}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 15, fontWeight: '900', color: palette.ink }}>#{order.orderNumber}</Text>
+                      <Text style={{ fontSize: 13, color: palette.slate500, marginTop: 4 }}>📍 {order.deliveryAddress.street}, {order.deliveryAddress.city}</Text>
+                      {getDistanceLabel(order) ? <Text style={{ fontSize: 12, color: palette.sky, marginTop: 3, fontWeight: '600' }}>🛵 {getDistanceLabel(order)}</Text> : null}
                     </View>
-                    <View className="bg-blue-600 px-3 py-1 rounded-full">
-                      <Text className="text-white text-xs font-semibold">NEW</Text>
+                    <View style={{ backgroundColor: palette.sky, paddingHorizontal: 10, paddingVertical: 4, borderRadius: radii.pill }}>
+                      <Text style={{ color: palette.white, fontSize: 11, fontWeight: '800' }}>NEW</Text>
                     </View>
                   </View>
-
-                  <View className="flex-row justify-between items-center">
-                    <Text className="text-lg font-bold text-primary-600">
-                      Earn {formatCurrency(DELIVERY_FEE)}
-                    </Text>
-                    <View className="flex-row">
-                      <TouchableOpacity
-                        onPress={() => handleDeclineOrder(order.id)}
-                        className="bg-gray-100 px-4 py-2 rounded-lg mr-2"
-                      >
-                        <Text className="text-gray-700 font-semibold">Decline</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        onPress={() => handleAcceptOrder(order.id)}
-                        className="bg-primary-600 px-6 py-2 rounded-lg"
-                      >
-                        <Text className="text-white font-semibold">Accept</Text>
-                      </TouchableOpacity>
+                  <Divider style={{ marginVertical: 12 }} />
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Text style={{ fontSize: 16, fontWeight: '900', color: palette.green700 }}>Earn {formatCurrency(DELIVERY_FEE)}</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <PressableScale onPress={() => handleDeclineOrder(order.id)} style={{ marginRight: 8 }}>
+                        <View style={{ paddingHorizontal: 16, paddingVertical: 10, borderRadius: radii.pill, backgroundColor: palette.slate100 }}>
+                          <Text style={{ fontSize: 13, fontWeight: '800', color: palette.slate600 }}>Decline</Text>
+                        </View>
+                      </PressableScale>
+                      <PressableScale onPress={() => handleAcceptOrder(order.id)}>
+                        <View style={[{ paddingHorizontal: 22, paddingVertical: 10, borderRadius: radii.pill, backgroundColor: palette.green600 }, shadows.sm]}>
+                          <Text style={{ fontSize: 13, fontWeight: '800', color: palette.white }}>Accept</Text>
+                        </View>
+                      </PressableScale>
                     </View>
                   </View>
-                </MotiView>
+                </FadeInUp>
               ))}
             </View>
           )}
 
-          {/* My Orders */}
-          <View className="px-6 py-4">
-            <Text className="text-lg font-bold text-gray-900 mb-3">
-              My Deliveries ({myOrders.length})
-            </Text>
-
-            {myOrders.length === 0 ? (
-              <View className="bg-gray-50 rounded-xl p-8 items-center">
-                <Text className="text-4xl mb-2">🚚</Text>
-                <Text className="text-gray-600">No active deliveries</Text>
-                <Text className="text-sm text-gray-500 mt-1">
-                  Turn on availability to receive orders
-                </Text>
-              </View>
-            ) : (
-              myOrders.map((order, index) => (
-                <MotiView
-                  key={order.id}
-                  from={{ opacity: 0, translateY: 20 }}
-                  animate={{ opacity: 1, translateY: 0 }}
-                  transition={{ type: 'timing', duration: 300, delay: index * 50 }}
-                  className="bg-white border border-gray-200 rounded-xl p-4 mb-3"
-                >
-                  <View className="flex-row justify-between items-start mb-3">
-                    <View className="flex-1">
-                      <Text className="text-base font-bold text-gray-900 mb-1">
-                        {order.orderNumber}
-                      </Text>
-                      <Text className="text-sm text-gray-600 mb-1">
-                        Customer: {order.customerName}
-                      </Text>
-                      <Text className="text-sm text-gray-600">
-                        📍 {order.deliveryAddress.street}
-                      </Text>
-                    </View>
-                    <View className="bg-primary-100 px-3 py-1 rounded-full">
-                      <Text className="text-primary-600 text-xs font-semibold">
-                        {order.orderStatus}
-                      </Text>
-                    </View>
+          <Text style={{ fontSize: 17, fontWeight: '800', color: palette.ink, marginBottom: 12, marginTop: availableOrders.length > 0 ? 8 : 0 }}>My Deliveries ({myOrders.length})</Text>
+          {myOrders.length === 0 ? (
+            <View style={{ backgroundColor: palette.white, borderRadius: radii.lg, padding: 30, alignItems: 'center' }}>
+              <Text style={{ fontSize: 40 }}>🚚</Text>
+              <Text style={{ color: palette.slate600, marginTop: 10, fontSize: 15, fontWeight: '700' }}>No active deliveries</Text>
+              <Text style={{ color: palette.slate400, marginTop: 4, fontSize: 13 }}>Go online to receive orders</Text>
+            </View>
+          ) : (
+            myOrders.map((order) => (
+              <FadeInUp key={order.id} style={[{ backgroundColor: palette.white, borderRadius: radii.lg, padding: 16, marginBottom: 12 }, shadows.sm] as any}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 15, fontWeight: '900', color: palette.ink }}>#{order.orderNumber}</Text>
+                    <Text style={{ fontSize: 13, color: palette.slate500, marginTop: 4 }}>👤 {order.customerName}</Text>
+                    <Text style={{ fontSize: 13, color: palette.slate500, marginTop: 2 }}>📍 {order.deliveryAddress.street}</Text>
                   </View>
-
-                  <View className="flex-row justify-between items-center pt-3 border-t border-gray-200">
-                    <Text className="text-base font-bold text-primary-600">
-                      {formatCurrency(DELIVERY_FEE)} delivery fee
-                    </Text>
-                    
-                    {['assigned', 'picked_up', 'out_for_delivery'].includes(order.orderStatus) && (
-                      <TouchableOpacity
-                        onPress={() => handleUpdateStatus(order.id, order.orderStatus)}
-                        className="bg-primary-600 px-4 py-2 rounded-lg"
-                      >
-                        <Text className="text-white font-semibold">
-                          {order.orderStatus === 'assigned' && 'Pick Up'}
-                          {order.orderStatus === 'picked_up' && 'Start Delivery'}
-                          {order.orderStatus === 'out_for_delivery' && 'Delivered'}
-                        </Text>
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                </MotiView>
-              ))
-            )}
-          </View>
+                  <StatusPill status={order.orderStatus as any} size="sm" />
+                </View>
+                <Divider style={{ marginVertical: 12 }} />
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Text style={{ fontSize: 14.5, fontWeight: '800', color: palette.green700 }}>{formatCurrency(DELIVERY_FEE)} fee</Text>
+                  {['assigned', 'picked_up', 'out_for_delivery'].includes(order.orderStatus) ? (
+                    <View style={{ minWidth: 140 }}>
+                      <Button label={actionLabel(order.orderStatus)} size="sm" icon="navigate" onPress={() => handleUpdateStatus(order.id, order.orderStatus)} />
+                    </View>
+                  ) : null}
+                </View>
+              </FadeInUp>
+            ))
+          )}
         </ScrollView>
       )}
     </View>
   );
 }
-

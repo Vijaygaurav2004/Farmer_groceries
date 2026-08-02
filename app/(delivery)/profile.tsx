@@ -1,177 +1,100 @@
 import React, { useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  Alert,
-} from 'react-native';
+import { View, Text, ScrollView, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
-import { MotiView } from 'moti';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { SupabaseService } from '../../src/services/supabase';
-import { APP_CONFIG } from '../../src/constants';
+import { APP_CONFIG, DELIVERY_FEE } from '../../src/constants';
+import { formatCurrency } from '../../src/utils/helpers';
+import { PressableScale, useToast, Divider } from '../../src/components/ui';
+import { palette, radii, shadows, gradients } from '../../src/theme';
+
+type IoniconName = keyof typeof Ionicons.glyphMap;
 
 export default function DeliveryProfileScreen() {
   const { user, signOut } = useAuth();
   const router = useRouter();
+  const toast = useToast();
   const [deliveredCount, setDeliveredCount] = useState(0);
 
   useEffect(() => {
     if (!user) return;
-
-    SupabaseService.getDeliveryPartnerDeliveredOrders(user.id)
-      .then(orders => setDeliveredCount(orders.length))
-      .catch(error => console.error('Error loading delivered orders:', error));
+    SupabaseService.getDeliveryPartnerDeliveredOrders(user.id).then((orders) => setDeliveredCount(orders.length)).catch((e) => console.error(e));
   }, [user]);
 
   const handleSignOut = () => {
-    Alert.alert(
-      'Sign Out',
-      'Are you sure you want to sign out?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Sign Out',
-          style: 'destructive',
-          onPress: async () => {
-            await signOut();
-            router.replace('/(auth)/login');
-          },
-        },
-      ]
-    );
+    Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Sign Out', style: 'destructive', onPress: async () => { await signOut(); router.replace('/(auth)/login'); } },
+    ]);
   };
 
-  const menuItems = [
-    { 
-      icon: '🚚', 
-      label: 'Vehicle Details', 
-      action: () => Alert.alert('Vehicle Details', 'Update your vehicle information and license plate'),
-      description: 'Manage vehicle information'
-    },
-    { 
-      icon: '📄', 
-      label: 'Documents', 
-      action: () => Alert.alert('Documents', 'Upload driving license and vehicle registration'),
-      description: 'Upload required documents'
-    },
-    { 
-      icon: '💰', 
-      label: 'Payment Settings', 
-      action: () => Alert.alert('Payment', 'Manage your bank account for payouts'),
-      description: 'Setup payment methods'
-    },
-    { 
-      icon: '📊', 
-      label: 'Delivery Stats', 
-      action: () => Alert.alert('Stats', 'View your delivery statistics and performance'),
-      description: 'View your performance'
-    },
-    { 
-      icon: '🔔', 
-      label: 'Notifications', 
-      action: () => Alert.alert('Notifications', 'Manage order and delivery alerts'),
-      description: 'Notification preferences'
-    },
-    { 
-      icon: '❓', 
-      label: 'Help & Support', 
-      action: () => Alert.alert('Support', 'Contact us at delivery-support@farmergroceries.com'),
-      description: 'Get help with deliveries'
-    },
-    { 
-      icon: '📋', 
-      label: 'Terms & Conditions', 
-      action: () => Alert.alert('Terms', 'View delivery partner terms'),
-      description: 'Read our terms'
-    },
+  const items: { icon: IoniconName; label: string; color: string }[] = [
+    { icon: 'bicycle-outline', label: 'Vehicle Details', color: palette.green600 },
+    { icon: 'document-attach-outline', label: 'Documents', color: palette.sky },
+    { icon: 'card-outline', label: 'Payment Settings', color: palette.amber600 },
+    { icon: 'stats-chart-outline', label: 'Delivery Stats', color: palette.violet },
+    { icon: 'notifications-outline', label: 'Notifications', color: palette.coral },
+    { icon: 'help-circle-outline', label: 'Help & Support', color: palette.slate500 },
+  ];
+
+  const stats = [
+    { label: 'Deliveries', value: `${deliveredCount}`, color: palette.green700 },
+    { label: 'Rating', value: '4.9', color: palette.amber600 },
+    { label: 'Earned', value: formatCurrency(deliveredCount * DELIVERY_FEE), color: palette.sky },
   ];
 
   return (
-    <View className="flex-1 bg-white">
-      {/* Header */}
-      <View className="px-6 pt-14 pb-6 bg-primary-600">
-        <View className="items-center">
-          <View className="w-24 h-24 bg-white rounded-full items-center justify-center mb-3">
-            <Text className="text-5xl">🚚</Text>
+    <View style={{ flex: 1, backgroundColor: palette.slate50 }}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
+        <LinearGradient colors={gradients.brand as any} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ paddingTop: 60, paddingBottom: 28, alignItems: 'center', borderBottomLeftRadius: 30, borderBottomRightRadius: 30 }}>
+          <View style={[{ width: 92, height: 92, borderRadius: 46, backgroundColor: palette.white, alignItems: 'center', justifyContent: 'center', marginBottom: 12 }, shadows.md]}>
+            <Text style={{ fontSize: 46 }}>🛵</Text>
           </View>
-          <Text className="text-white text-2xl font-bold mb-1">
-            {user?.name || 'Delivery Partner'}
-          </Text>
-          {user?.phoneNumber && (
-            <Text className="text-primary-100">{user.phoneNumber}</Text>
-          )}
-          <View className="bg-green-500 px-4 py-1 rounded-full mt-2">
-            <Text className="text-white text-xs font-semibold">Active</Text>
-          </View>
-        </View>
-      </View>
+          <Text style={{ fontSize: 22, fontWeight: '900', color: palette.white }}>{user?.name || 'Partner'}</Text>
+          <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.85)', marginTop: 3 }}>Delivery Partner</Text>
+        </LinearGradient>
 
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-        <View className="px-6 py-6">
-          {/* Stats */}
-          <View className="mb-6">
-            <View className="bg-blue-50 rounded-xl p-4">
-              <Text className="text-sm text-gray-600 mb-1">Deliveries</Text>
-              <Text className="text-2xl font-bold text-gray-900">{deliveredCount}</Text>
+        {/* Stats */}
+        <View style={{ flexDirection: 'row', marginHorizontal: 18, marginTop: -22 }}>
+          {stats.map((s, i) => (
+            <View key={s.label} style={[{ flex: 1, backgroundColor: palette.white, borderRadius: radii.lg, paddingVertical: 16, alignItems: 'center', marginHorizontal: i === 1 ? 6 : 0, marginRight: i === 0 ? 6 : 0, marginLeft: i === 2 ? 6 : 0 }, shadows.md]}>
+              <Text style={{ fontSize: 19, fontWeight: '900', color: s.color }}>{s.value}</Text>
+              <Text style={{ fontSize: 11.5, color: palette.slate400, marginTop: 2 }}>{s.label}</Text>
             </View>
+          ))}
+        </View>
+
+        <View style={{ paddingHorizontal: 18, marginTop: 22 }}>
+          <View style={[{ backgroundColor: palette.white, borderRadius: radii.lg, overflow: 'hidden' }, shadows.sm]}>
+            {items.map((item, idx) => (
+              <View key={item.label}>
+                <PressableScale onPress={() => toast.show(`${item.label} — coming soon`, 'info')} scaleTo={0.99} haptic={false}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 15 }}>
+                    <View style={{ width: 38, height: 38, borderRadius: 12, backgroundColor: item.color + '18', alignItems: 'center', justifyContent: 'center' }}>
+                      <Ionicons name={item.icon} size={19} color={item.color} />
+                    </View>
+                    <Text style={{ flex: 1, fontSize: 15, fontWeight: '700', color: palette.ink, marginLeft: 14 }}>{item.label}</Text>
+                    <Ionicons name="chevron-forward" size={18} color={palette.slate300} />
+                  </View>
+                </PressableScale>
+                {idx < items.length - 1 ? <Divider style={{ marginLeft: 68 }} /> : null}
+              </View>
+            ))}
           </View>
 
-          {/* Menu Items */}
-          {menuItems.map((item, index) => (
-            <MotiView
-              key={item.label}
-              from={{ opacity: 0, translateX: -20 }}
-              animate={{ opacity: 1, translateX: 0 }}
-              transition={{ type: 'timing', duration: 300, delay: index * 50 }}
-            >
-              <TouchableOpacity
-                onPress={item.action}
-                className="py-4 border-b border-gray-100"
-              >
-                <View className="flex-row items-center">
-                  <View className="w-10 h-10 bg-gray-100 rounded-full items-center justify-center mr-4">
-                    <Text className="text-xl">{item.icon}</Text>
-                  </View>
-                  <View className="flex-1">
-                    <Text className="text-base font-semibold text-gray-900 mb-1">
-                      {item.label}
-                    </Text>
-                    <Text className="text-xs text-gray-500">
-                      {item.description}
-                    </Text>
-                  </View>
-                  <Text className="text-gray-400 text-xl">›</Text>
-                </View>
-              </TouchableOpacity>
-            </MotiView>
-          ))}
-
-          {/* Sign Out */}
-          <MotiView
-            from={{ opacity: 0, translateY: 20 }}
-            animate={{ opacity: 1, translateY: 0 }}
-            transition={{ type: 'timing', duration: 300, delay: 400 }}
-            className="mt-6"
-          >
-            <TouchableOpacity
-              onPress={handleSignOut}
-              className="bg-red-50 border border-red-200 rounded-xl py-4 items-center"
-            >
-              <Text className="text-red-600 font-semibold text-base">
-                Sign Out
-              </Text>
-            </TouchableOpacity>
-          </MotiView>
-
-          {/* Version */}
-          <Text className="text-center text-gray-400 text-sm mt-6">
-            {APP_CONFIG.name} v{APP_CONFIG.version}
-          </Text>
+          <View style={{ marginTop: 22 }}>
+            <PressableScale onPress={handleSignOut}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#fef2f2', borderRadius: radii.pill, paddingVertical: 16 }}>
+                <Ionicons name="log-out-outline" size={20} color={palette.coral} />
+                <Text style={{ fontSize: 15.5, fontWeight: '800', color: palette.coral, marginLeft: 8 }}>Sign Out</Text>
+              </View>
+            </PressableScale>
+            <Text style={{ textAlign: 'center', fontSize: 12, color: palette.slate400, marginTop: 18 }}>{APP_CONFIG.name} · v{APP_CONFIG.version}</Text>
+          </View>
         </View>
       </ScrollView>
     </View>
   );
 }
-
