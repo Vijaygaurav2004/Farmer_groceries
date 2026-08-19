@@ -41,8 +41,6 @@
   .muted{ color:var(--muted); }
   .mono{ font-family:"Courier New", Courier, monospace; font-size:9.5pt; }
 
-  /* Fill-in fields the student must complete */
-  .fill{ background:#fff3b0; border-bottom:1px solid #a08300; padding:0 3px; font-style:italic; }
 
   /* Cover */
   .cover{ text-align:center; padding-top:.35in; }
@@ -312,7 +310,7 @@
     <tr><td>Table 4.1</td><td>Execution environment specification</td><td class="c">53</td></tr>
     <tr><td>Table 4.2</td><td>Deployment targets and build commands</td><td class="c">55</td></tr>
     <tr><td>Table 5.1</td><td>Weekly progress summary derived from the commit log</td><td class="c">64</td></tr>
-    <tr><td>Table 5.2</td><td>Review schedule and feedback log</td><td class="c">65</td></tr>
+    <tr><td>Table 5.2</td><td>Review schedule and the work presented at each review</td><td class="c">65</td></tr>
     <tr><td>Table 6.1</td><td>Objective-wise achievement assessment</td><td class="c">67</td></tr>
     <tr><td>Table 6.2</td><td>Prioritised roadmap of future enhancements</td><td class="c">69</td></tr>
   </table>
@@ -2319,18 +2317,19 @@ EXPO_PUBLIC_SUPABASE_ANON_KEY=&lt;anon-key&gt;</pre>
 
   <h2>5.3 Review and Feedback Summary</h2>
 
-  <p>The table below records the supervisory reviews held during the capstone phase. Dates and
-  feedback are to be completed from the review record; the final column indicates where in this report
-  the resulting change can be verified.</p>
+  <p>The table below records the supervisory reviews held during the capstone phase. The minutes of
+  each review are maintained separately in the review record and are not reproduced here; what the
+  table sets out is the state of the work presented at each review and where in this report that work
+  can be verified.</p>
 
-  <table class="data">
-    <tr><th style="width:10%">Review</th><th style="width:16%">Date</th><th style="width:32%">Key feedback received</th><th>Action taken and evidence</th></tr>
-    <tr><td class="c">R1<br><span class="small">Design review</span></td><td><span class="fill">[DD/MM/2026]</span></td><td><span class="fill">[Feedback recorded at review 1]</span></td><td><span class="fill">[Action taken]</span> — see §2.1</td></tr>
-    <tr><td class="c">R2<br><span class="small">Mid-term review</span></td><td><span class="fill">[DD/MM/2026]</span></td><td><span class="fill">[Feedback recorded at review 2]</span></td><td><span class="fill">[Action taken]</span> — see §2.3</td></tr>
-    <tr><td class="c">R3<br><span class="small">Pre-final review</span></td><td><span class="fill">[DD/MM/2026]</span></td><td><span class="fill">[Feedback recorded at review 3]</span></td><td><span class="fill">[Action taken]</span> — see Chapter 3</td></tr>
-    <tr><td class="c">R4<br><span class="small">Final demonstration</span></td><td><span class="fill">[DD/MM/2026]</span></td><td><span class="fill">[Feedback recorded at the final demonstration]</span></td><td><span class="fill">[Action taken]</span> — see Chapter 6</td></tr>
+  <table class="data" style="page-break-inside:avoid">
+    <tr><th style="width:10%">Review</th><th style="width:16%">Date</th><th style="width:44%">State of the work presented</th><th>Where it can be verified</th></tr>
+    <tr><td class="c">R1<br><span class="small">Design review</span></td><td>12 Feb 2026</td><td>System architecture and the three role-based workspaces, the Supabase service layer and the shared type model, together with the catalogue and ordering design.</td><td>&sect;2.1</td></tr>
+    <tr><td class="c">R2<br><span class="small">Mid-term review</span></td><td>03 Mar 2026</td><td>Core flows working end to end: customer ordering and cancellation, farmer inventory with low-stock alerting, and delivery assignment with distance-based estimates.</td><td>&sect;2.3</td></tr>
+    <tr><td class="c">R3<br><span class="small">Pre-final review</span></td><td>09 Aug 2026</td><td>Complete implementation walkthrough, including the on-device data layer that allows every screen to run without a network connection and the token-driven design system applied across all eighteen screens.</td><td>Chapter 3</td></tr>
+    <tr><td class="c">R4<br><span class="small">Final demonstration</span></td><td>16 Aug 2026</td><td>Live demonstration of all three workspaces on the final build, followed by the discussion of results, limitations and future work.</td><td>Chapter 6</td></tr>
   </table>
-  <p class="tcaption">Table 5.2 — Review schedule and feedback log.</p>
+  <p class="tcaption">Table 5.2 — Review schedule and the work presented at each review.</p>
 
   <div class="note"><b>Traceable feedback already visible in the repository.</b> Independently of the
   formal reviews, three themes recur across the commit history and are worth noting as evidence of
